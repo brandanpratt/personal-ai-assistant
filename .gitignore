@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+google-credentials.json
+*.key
+*.pem
+.DS_Store
+# Archived finance code holds secrets; keep it out of git entirely
+archive/
+# Runtime state (undo journals, etc.)
+.state/
