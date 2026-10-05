@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { MEMORY_FILE } from './memory.js';
 
 /** State the files skill wrote directly into the shared state folder before skills had their own. */
-const LEGACY_ITEMS = ['journals', 'memory.json', 'reports', 'check.json', 'check.lock'];
+const LEGACY_ITEMS = ['journals', MEMORY_FILE, 'reports', 'check.json', 'check.lock'];
 
 /**
  * One-time move of old state into the skill's own folder, so existing undo journals and

@@ -1,4 +1,4 @@
-import { FolderNameSchema } from './namer.js';
+import { FolderName, folderKey } from './namer.js';
 import type { Taxonomy } from './taxonomy.js';
 
 export type Command =
@@ -49,10 +49,10 @@ export function applyEdit(t: Taxonomy, cmd: Extract<Command, { kind: 'rename' | 
   }
   const f = at(cmd.n);
   if (!f) return fail(`no folder ${cmd.n}`);
-  const parsed = FolderNameSchema.shape.folder.safeParse(cmd.name);
+  const parsed = FolderName.safeParse(cmd.name);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? 'invalid name');
   const target = parsed.data;
-  const existing = t.folders.findIndex((x, i) => i !== cmd.n - 1 && x.name.toLowerCase() === target.toLowerCase());
+  const existing = t.folders.findIndex((x, i) => i !== cmd.n - 1 && folderKey(x.name) === folderKey(target));
   if (existing >= 0) return applyEdit(t, { kind: 'merge', from: cmd.n, into: existing + 1 }); // renaming onto an existing name merges
   return { ok: true, taxonomy: { ...t, folders: t.folders.map((x, i) => (i === cmd.n - 1 ? { ...x, name: target } : x)) } };
 }
@@ -67,7 +67,7 @@ export function toPlacement(t: Taxonomy): Map<string, string> {
 
 export function formatTaxonomy(t: Taxonomy, remembered: ReadonlySet<string> = new Set()): string {
   const lines = t.folders.map(
-    (f, i) => `${String(i + 1).padStart(3)}. ${f.name} (${f.docs.length})${remembered.has(f.name.toLowerCase()) ? '  [remembered]' : ''}`,
+    (f, i) => `${String(i + 1).padStart(3)}. ${f.name} (${f.docs.length})${remembered.has(folderKey(f.name)) ? '  [remembered]' : ''}`,
   );
   lines.push('', `Review (${t.review.length}): files we weren't confident about go to _review`);
   return lines.join('\n');

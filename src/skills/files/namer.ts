@@ -6,16 +6,21 @@ import type { Doc } from './clusterText.js';
 const RESERVED = new Set(['_review', 'misc', 'other', 'miscellaneous', 'files', 'documents', 'untitled', 'unknown']);
 
 /** Folder names become path segments, so allow only plain, short, readable names. */
+export const FolderName = z
+  .string()
+  .trim()
+  .min(2)
+  .max(40)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9 &'-]*$/, 'letters, digits, spaces, & \' - only')
+  .refine((n) => !RESERVED.has(n.toLowerCase()), 'reserved or generic name');
+
 export const FolderNameSchema = z.object({
-  folder: z
-    .string()
-    .trim()
-    .min(2)
-    .max(40)
-    .regex(/^[A-Za-z0-9][A-Za-z0-9 &'-]*$/, 'letters, digits, spaces, & \' - only')
-    .refine((n) => !RESERVED.has(n.toLowerCase()), 'reserved or generic name'),
+  folder: FolderName,
   reason: z.string().trim().max(200),
 });
+
+/** Case-insensitive identity of a folder name, so "Resumes" and "resumes " are the same folder. */
+export const folderKey = (name: string) => name.trim().toLowerCase();
 
 const SYSTEM = `You organize a person's files into folders by topic.
 You are shown several similar files (name plus a text snippet). Reply with JSON: a short folder name (1-4 words, Title Case) that describes what these files have in common, and a one-sentence reason.

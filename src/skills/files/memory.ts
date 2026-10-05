@@ -2,10 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { centroid, cosineSimilarity } from '../../core/ai/cluster.js';
-import { FolderNameSchema } from './namer.js';
+import { readJson, writeJsonAtomic } from '../../core/util.js';
+import { FolderName, folderKey } from './namer.js';
 import type { Taxonomy } from './taxonomy.js';
-
-const FolderName = FolderNameSchema.shape.folder;
 
 /**
  * What the agent remembers between runs. No file contents are stored: only the folders you
@@ -23,27 +22,21 @@ export type Memory = z.infer<typeof MemorySchema>;
 
 /** After this many files a folder's centroid keeps adapting instead of freezing. */
 const MAX_WEIGHT = 50;
-const key = (s: string) => s.trim().toLowerCase();
+export const MEMORY_FILE = 'memory.json';
+export const memoryFilePath = (stateDir: string) => path.join(stateDir, MEMORY_FILE);
 
 export const emptyMemory = (embedModel: string): Memory => ({ version: 1, embedModel, folders: [], aliases: {} });
 
 /** Never throws: a missing, corrupt or mismatched memory file just means starting fresh. */
 export function loadMemory(file: string, embedModel: string): Memory {
-  try {
-    const parsed = MemorySchema.safeParse(JSON.parse(fs.readFileSync(file, 'utf8')));
-    if (parsed.success && parsed.data.embedModel === embedModel) return parsed.data;
-  } catch {
-    /* fall through */
-  }
+  const parsed = MemorySchema.safeParse(readJson(file));
+  if (parsed.success && parsed.data.embedModel === embedModel) return parsed.data;
   return emptyMemory(embedModel);
 }
 
 /** Atomic write: a crash mid-save can't leave a half-written memory file. */
 export function saveMemory(file: string, memory: Memory): void {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(MemorySchema.parse(memory)));
-  fs.renameSync(tmp, file);
+  writeJsonAtomic(file, MemorySchema.parse(memory));
 }
 
 /** The remembered folder whose centroid is most similar to `vector`, if similar enough. */
@@ -57,7 +50,7 @@ export function matchKnown(memory: Memory, vector: number[], threshold: number):
   return best && best.sim >= threshold ? best.name : undefined;
 }
 
-export const applyAlias = (memory: Memory, name: string): string => memory.aliases[key(name)] ?? name;
+export const applyAlias = (memory: Memory, name: string): string => memory.aliases[folderKey(name)] ?? name;
 
 /**
  * Pure: returns updated memory after you approved `final`.
@@ -73,10 +66,10 @@ export function learn(memory: Memory, initial: Taxonomy, final: Taxonomy, vector
   for (const f of final.folders) {
     for (const d of f.docs) {
       const was = initialName.get(d.file.path);
-      if (!was || key(was) === key(f.name)) continue;
-      const inner = tally.get(key(was)) ?? new Map<string, number>();
+      if (!was || folderKey(was) === folderKey(f.name)) continue;
+      const inner = tally.get(folderKey(was)) ?? new Map<string, number>();
       inner.set(f.name, (inner.get(f.name) ?? 0) + 1);
-      tally.set(key(was), inner);
+      tally.set(folderKey(was), inner);
     }
   }
   const aliases = { ...memory.aliases };
@@ -84,14 +77,14 @@ export function learn(memory: Memory, initial: Taxonomy, final: Taxonomy, vector
     const [target] = [...targets].sort((a, b) => b[1] - a[1])[0]!;
     aliases[from] = target;
   }
-  for (const [from, to] of Object.entries(aliases)) if (key(to) === from) delete aliases[from];
+  for (const [from, to] of Object.entries(aliases)) if (folderKey(to) === from) delete aliases[from];
 
   const folders = memory.folders.map((f) => ({ ...f }));
   for (const f of final.folders) {
     const vecs = f.docs.map((d) => vectors.get(d.file.path)).filter((v): v is number[] => !!v);
     if (vecs.length < 2) continue;
     const fresh = centroid(vecs);
-    const old = folders.find((x) => key(x.name) === key(f.name));
+    const old = folders.find((x) => folderKey(x.name) === folderKey(f.name));
     if (!old) {
       folders.push({ name: f.name, centroid: fresh, count: vecs.length });
     } else if (old.centroid.length === fresh.length) {
@@ -113,19 +106,16 @@ export const hasMemorySnapshot = (journalFile: string) => fs.existsSync(snapshot
  */
 export function saveLearnedMemory(memoryFile: string, journalFile: string, before: Memory, after: Memory): void {
   const empty = before.folders.length === 0 && Object.keys(before.aliases).length === 0;
-  fs.writeFileSync(snapshotPath(journalFile), JSON.stringify({ before: empty ? null : MemorySchema.parse(before) }));
+  writeJsonAtomic(snapshotPath(journalFile), { before: empty ? null : MemorySchema.parse(before) });
   saveMemory(memoryFile, after);
 }
 
 /** Restores the memory from before the run (deleting the file if there was none). False if the run learned nothing. */
 export function restoreMemoryBeforeRun(memoryFile: string, journalFile: string): boolean {
   const snap = snapshotPath(journalFile);
-  let before: unknown;
-  try {
-    before = JSON.parse(fs.readFileSync(snap, 'utf8')).before;
-  } catch {
-    return false;
-  }
+  const snapshot = readJson(snap) as { before?: unknown } | undefined;
+  if (!snapshot || !('before' in snapshot)) return false;
+  const { before } = snapshot;
   if (before === null) fs.rmSync(memoryFile, { force: true });
   else saveMemory(memoryFile, MemorySchema.parse(before));
   fs.rmSync(snap, { force: true });

@@ -1,7 +1,7 @@
 import { loadDocs } from './clusterText.js';
 import { embed } from '../../core/ai/embeddings.js';
 import { applyAlias, matchKnown, type Memory } from './memory.js';
-import { createNamer, ollamaChat } from './namer.js';
+import { createNamer, folderKey, ollamaChat } from './namer.js';
 import type { FileInfo } from './scanner.js';
 import { buildTaxonomy, type Folder, type Taxonomy } from './taxonomy.js';
 
@@ -40,7 +40,10 @@ export async function proposeTaxonomy(
   const restDocs: typeof docs = [];
   for (const d of docs) {
     const name = matchKnown(memory, vectors.get(d.file.path)!, KNOWN_THRESHOLD);
-    if (name) known.set(name.toLowerCase(), { name, docs: [...(known.get(name.toLowerCase())?.docs ?? []), d] });
+    if (name) {
+      const k = folderKey(name);
+      known.set(k, { name, docs: [...(known.get(k)?.docs ?? []), d] });
+    }
     else restDocs.push(d);
   }
   log(`${docs.length - restDocs.length} matched remembered folders; ${restDocs.length} to cluster and name...`);
@@ -55,7 +58,7 @@ export async function proposeTaxonomy(
   // a newly named folder with the same name as a remembered one is the same folder
   const folders = new Map(known);
   for (const f of fresh.folders) {
-    const k = f.name.toLowerCase();
+    const k = folderKey(f.name);
     folders.set(k, { name: folders.get(k)?.name ?? f.name, docs: [...(folders.get(k)?.docs ?? []), ...f.docs] });
   }
   return {

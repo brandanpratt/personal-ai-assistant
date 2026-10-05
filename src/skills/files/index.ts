@@ -3,7 +3,7 @@ import type { Skill } from '../../core/skill.js';
 import { runCheck } from './check.js';
 import { filesCommands } from './commands.js';
 import { loadFilesConfig } from './config.js';
-import { loadMemory } from './memory.js';
+import { loadMemory, memoryFilePath } from './memory.js';
 import { migrateLegacyState } from './migrate.js';
 import { proposeTaxonomy, summarizeKnown } from './organize.js';
 import { scan } from './scanner.js';
@@ -39,7 +39,7 @@ export const filesSkill: Skill = {
 
   async check(ctx) {
     const cfg = loadFilesConfig();
-    const memory = loadMemory(path.join(ctx.stateDir, 'memory.json'), ctx.models.embed);
+    const memory = loadMemory(memoryFilePath(ctx.stateDir), ctx.models.embed);
     const res = await runCheck({
       root: cfg.allowedRoot,
       stateDir: ctx.stateDir,

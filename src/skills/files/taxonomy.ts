@@ -1,5 +1,6 @@
 import { centroid, clusterRecursive, cosineSimilarity } from '../../core/ai/cluster.js';
 import { CLUSTER_THRESHOLD, MAX_CLUSTER_SIZE, type Doc } from './clusterText.js';
+import { folderKey } from './namer.js';
 
 export interface Folder {
   name: string;
@@ -23,8 +24,6 @@ export interface TaxonomyOptions {
   /** Reusing an existing folder name only merges clusters at least this similar; otherwise a separate folder is made. */
   mergeMinSim?: number;
 }
-
-const key = (name: string) => name.trim().toLowerCase();
 
 /**
  * Turns documents + their embeddings into named topic folders:
@@ -61,11 +60,11 @@ export async function buildTaxonomy(
       continue;
     }
     // the model tends to reuse a name too eagerly; only merge if the clusters really are alike
-    let k = key(name);
+    let k = folderKey(name);
     let n = name;
     for (let i = 2; groups.has(k) && cosineSimilarity(c, centroid(groups.get(k)!.members.map((m) => vectors[m]!))) < mergeMinSim; i++) {
       n = `${name} ${i}`;
-      k = key(n);
+      k = folderKey(n);
     }
     const g = groups.get(k) ?? { name: n, members: [] };
     g.members.push(...members);
