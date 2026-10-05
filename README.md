@@ -4,6 +4,8 @@ A local, privacy-first personal assistant. Its first skill is organizing your Do
 
 Everything runs on your machine with Ollama. No file content leaves your computer.
 
+See [CHANGELOG.md](CHANGELOG.md) for what has changed.
+
 **Core rule: the AI proposes, the code and you decide.** It never deletes anything, never moves files without your typed `yes`, and every run can be undone.
 
 > This project began as a finance agent. That code is archived in `archive/finance/` (gitignored, since it holds secrets) and may come back later as a second agent.
