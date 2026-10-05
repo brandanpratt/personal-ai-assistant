@@ -1,13 +1,14 @@
 import path from 'node:path';
 import { z } from 'zod';
-import { execute, undo } from './executor.js';
+import { execute } from './executor.js';
 import { latestUndoable } from './journal.js';
-import { learn, loadMemory, saveMemory } from './memory.js';
+import { learn, loadMemory, saveLearnedMemory } from './memory.js';
 import type { Tool } from '../../core/skill.js';
 import type { Proposal } from './organize.js';
 import { formatPlanSummary, planMoves } from './planner.js';
 import { applyEdit, formatTaxonomy, toPlacement } from './review.js';
 import { scan, type FileInfo } from './scanner.js';
+import { describeUndo, undoRun } from './undoRun.js';
 import type { Taxonomy } from './taxonomy.js';
 
 /**
@@ -115,7 +116,8 @@ export function createTools(deps: SessionDeps): Tool[] {
         if (!(await confirm(`\nMove ${plan.moves.length} files in ${root}?`))) return 'The user declined. Nothing was moved.';
         const res = execute(root, plan.moves, stateDir);
         if (res.moved > 0 && proposal && taxonomy) {
-          saveMemory(memoryFile, learn(loadMemory(memoryFile, deps.embedModel), proposal.taxonomy, taxonomy, proposal.vectors));
+          const before = loadMemory(memoryFile, deps.embedModel);
+          saveLearnedMemory(memoryFile, res.journalFile, before, learn(before, proposal.taxonomy, taxonomy, proposal.vectors));
         }
         proposal = taxonomy = undefined;
         return `Moved ${res.moved}, skipped ${res.skipped.length}. The run can be undone with undo_last_run.`;
@@ -123,14 +125,13 @@ export function createTools(deps: SessionDeps): Tool[] {
     },
     {
       name: 'undo_last_run',
-      description: 'Reverse the most recent run that has not been undone. The user is asked to type "yes" first.',
+      description: 'Reverse the most recent run that has not been undone, and forget the folders it learned. The user is asked to type "yes" first.',
       schema: z.object({}),
       run: async () => {
         const file = latestUndoable(stateDir);
         if (!file) return 'There is nothing to undo.';
         if (!(await confirm('\nUndo the most recent run?'))) return 'The user declined. Nothing was undone.';
-        const res = undo(file);
-        return `Restored ${res.restored}, skipped ${res.skipped.length}.`;
+        return describeUndo(undoRun(file, memoryFile));
       },
     },
   ];

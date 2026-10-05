@@ -102,3 +102,32 @@ export function learn(memory: Memory, initial: Taxonomy, final: Taxonomy, vector
   }
   return { ...memory, folders, aliases };
 }
+
+const snapshotPath = (journalFile: string) => journalFile.replace(/\.jsonl$/, '.memory-before.json');
+
+export const hasMemorySnapshot = (journalFile: string) => fs.existsSync(snapshotPath(journalFile));
+
+/**
+ * Saves `after` as the new memory, first recording `before` next to the run's journal so that
+ * undoing the run can restore it. The snapshot is written first: a crash in between is harmless.
+ */
+export function saveLearnedMemory(memoryFile: string, journalFile: string, before: Memory, after: Memory): void {
+  const empty = before.folders.length === 0 && Object.keys(before.aliases).length === 0;
+  fs.writeFileSync(snapshotPath(journalFile), JSON.stringify({ before: empty ? null : MemorySchema.parse(before) }));
+  saveMemory(memoryFile, after);
+}
+
+/** Restores the memory from before the run (deleting the file if there was none). False if the run learned nothing. */
+export function restoreMemoryBeforeRun(memoryFile: string, journalFile: string): boolean {
+  const snap = snapshotPath(journalFile);
+  let before: unknown;
+  try {
+    before = JSON.parse(fs.readFileSync(snap, 'utf8')).before;
+  } catch {
+    return false;
+  }
+  if (before === null) fs.rmSync(memoryFile, { force: true });
+  else saveMemory(memoryFile, MemorySchema.parse(before));
+  fs.rmSync(snap, { force: true });
+  return true;
+}

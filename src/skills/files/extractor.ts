@@ -40,7 +40,8 @@ export async function extractText(file: FileInfo, maxChars = DEFAULT_MAX_CHARS):
     } else if (MARKUP.has(file.ext)) {
       text = stripTags(await readHead(file.path));
     } else if (file.ext === 'pdf' && file.size <= MAX_PARSE_BYTES) {
-      const pdf = await getDocumentProxy(new Uint8Array(await fs.readFile(file.path)));
+      // verbosity 0 = errors only; otherwise pdf.js prints a warning per odd font, flooding the terminal
+      const pdf = await getDocumentProxy(new Uint8Array(await fs.readFile(file.path)), { verbosity: 0 });
       text = (await extractPdfText(pdf, { mergePages: true })).text;
     } else if (file.ext === 'docx' && file.size <= MAX_PARSE_BYTES) {
       text = (await mammoth.extractRawText({ path: file.path })).value;

@@ -1,13 +1,14 @@
 import path from 'node:path';
 import type { Command, SkillContext } from '../../core/skill.js';
 import { loadFilesConfig } from './config.js';
-import { execute, undo } from './executor.js';
+import { execute } from './executor.js';
 import { latestUndoable } from './journal.js';
-import { learn, loadMemory, saveMemory } from './memory.js';
+import { learn, loadMemory, saveLearnedMemory } from './memory.js';
 import { proposeTaxonomy } from './organize.js';
 import { formatPlan, formatPlanSummary, planMoves, type Plan } from './planner.js';
 import { applyEdit, formatTaxonomy, parseCommand, toPlacement } from './review.js';
 import { scan } from './scanner.js';
+import { describeUndo, undoRun } from './undoRun.js';
 
 function runMoves(root: string, moves: Plan['moves'], ctx: SkillContext) {
   const res = execute(root, moves, ctx.stateDir);
@@ -70,7 +71,7 @@ const organize: Command = {
       const res = runMoves(root, p.moves, ctx);
       // learn only from a plan you approved and that actually ran
       if (res.moved > 0) {
-        saveMemory(memoryFile, learn(memory, proposal.taxonomy, taxonomy, proposal.vectors));
+        saveLearnedMemory(memoryFile, res.journalFile, memory, learn(memory, proposal.taxonomy, taxonomy, proposal.vectors));
         console.log(`Remembered your folders in ${memoryFile}`);
       }
     } else console.log('Nothing done.');
@@ -83,8 +84,8 @@ const undoCommand: Command = {
     const file = latestUndoable(ctx.stateDir);
     if (!file) return console.log('Nothing to undo.');
     if (!(await ctx.confirm(`Undo the run recorded in ${file}?`))) return console.log('Nothing done.');
-    const res = undo(file);
-    console.log(`Restored ${res.restored}, skipped ${res.skipped.length}.`);
+    const res = undoRun(file, path.join(ctx.stateDir, 'memory.json'));
+    console.log(describeUndo(res));
     for (const s of res.skipped) console.log(`  skipped ${s.to}: ${s.reason}`);
   },
 };

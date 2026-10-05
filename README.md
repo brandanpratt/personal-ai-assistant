@@ -76,6 +76,8 @@ Stored per skill in `.state/files/memory.json`, written only after a run you app
 
 If the file is missing, corrupt, or made with a different embedding model, it simply starts fresh.
 
+**Undo also forgets.** Each learning run saves a snapshot of the previous memory next to its journal. Undoing the run restores it, so folders you backed out of aren't remembered. If an undo is only partial (some files couldn't go back), the learning is kept, because those files are still in the folders it learned.
+
 ## Scheduling the check (optional)
 
 `npm run schedule` prints a launchd job and the install commands. The job runs `check` (every skill's notify-only check) every 6 hours. Installing it is your call, since it changes your system.
@@ -136,7 +138,6 @@ Rules every skill follows:
 
 - **Scanned PDFs** (about a third of one test Downloads folder) have no text, so they're filed by type only. Reading them would need OCR.
 - **The 0.8 similarity cutoff for remembered folders** was tuned on a small test, not yet on real Downloads. Check the `[remembered]` folders on a real second run.
-- **Undo doesn't forget** what the agent learned from that run.
 - **Only loose top-level files** are considered. Files already in subfolders aren't re-sorted.
 - **The 8B chat model can be sloppy**: it may call a tool you didn't ask for or paraphrase loosely. The approval gate covers the dangerous cases. Use `show_folder` or `preview_plan` for exact lists.
 - **macOS privacy** may block the scheduled job from reading Downloads until you grant `node` access in System Settings. Untested.
