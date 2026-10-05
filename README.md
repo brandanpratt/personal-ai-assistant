@@ -92,6 +92,7 @@ src/
     agent.ts              the tool-calling loop and the shared system prompt
     chat.ts               interactive chat over all skills' tools
     config.ts             shared settings (models, state folder)
+    util.ts               small shared helpers (error messages, atomic JSON read/write)
     io.ts                 terminal input (one reader, closed input = abort)
     notify.ts schedule.ts macOS notification and launchd job generator
     safety/               pathGuard (stay inside the folder), sensitive (never read secrets)
@@ -100,9 +101,10 @@ src/
     files/                the file organizer, as the first skill
       index.ts            the skill definition (name, tools, commands, check)
       config.ts commands.ts migrate.ts
+      apply.ts undoRun.ts  the one shared way to run a plan and learn, and to undo and forget
       scanner categories planner executor journal extractor
       clusterText namer taxonomy review memory organize tools check
-tests/                    mirrors src/ (core/ and skills/files/)
+tests/                    mirrors src/ (core/ and skills/files/); helpers/ holds shared test setup
 .state/<skill>/           each skill's journals, memory, reports (gitignored)
 archive/finance/          the original finance code (gitignored)
 ```
