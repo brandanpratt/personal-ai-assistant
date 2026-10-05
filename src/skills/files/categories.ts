@@ -18,7 +18,6 @@ const BY_EXTENSION = new Map<string, Category>(
   ),
 );
 
-export const CATEGORIES = Object.keys(CATEGORY_EXTENSIONS) as Category[];
 
 /** Returns the category for a lowercased extension, or undefined if no rule matches. */
 export function categorize(ext: string): Category | undefined {

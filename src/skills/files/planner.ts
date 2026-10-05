@@ -58,6 +58,10 @@ export function planMoves(root: string, files: FileInfo[], placement?: ReadonlyM
   return plan;
 }
 
+/** The one-line totals shown under every plan. */
+const totalsLine = (plan: Plan) =>
+  `${plan.moves.length} to move, ${plan.unclassified.length} unclassified (left alone), ${plan.alreadyOrganized.length} already organized.`;
+
 /** Compact view: one line per destination folder with its file count. */
 export function formatPlanSummary(root: string, plan: Plan, title = 'DRY RUN: nothing has been moved.'): string {
   const counts = new Map<string, number>();
@@ -67,7 +71,7 @@ export function formatPlanSummary(root: string, plan: Plan, title = 'DRY RUN: no
   }
   const lines = [title, ''];
   for (const [dir, n] of [...counts].sort(([a], [b]) => (a < b ? -1 : 1))) lines.push(`  ${String(n).padStart(4)}  ${dir}/`);
-  lines.push('', `${plan.moves.length} to move, ${plan.unclassified.length} unclassified (left alone), ${plan.alreadyOrganized.length} already organized.`);
+  lines.push('', totalsLine(plan));
   return lines.join('\n');
 }
 
@@ -75,10 +79,7 @@ export function formatPlan(root: string, plan: Plan): string {
   const rel = (p: string) => path.relative(root, p);
   const lines = [`DRY RUN: nothing has been moved.`, ''];
   for (const m of plan.moves) lines.push(`  ${rel(m.from)}  ->  ${rel(m.to)}`);
-  lines.push(
-    '',
-    `${plan.moves.length} to move, ${plan.unclassified.length} unclassified (left alone), ${plan.alreadyOrganized.length} already organized.`,
-  );
+  lines.push('', totalsLine(plan));
   if (plan.unclassified.length) {
     lines.push('Unclassified:', ...plan.unclassified.map((f) => `  ${f.name}`));
   }

@@ -13,5 +13,3 @@ export async function embed(model: string, texts: string[]): Promise<number[][]>
   return out;
 }
 
-/** nomic-embed-text expects a task prefix; "clustering:" suits grouping similar documents. */
-export const clusteringInput = (fileName: string, text: string) => `clustering: ${fileName}\n${text}`;
