@@ -5,10 +5,10 @@
   "type": "module",
   "description": "Personal AI assistant. First skill: a local, privacy-first file organizer (dry-run by default, undoable).",
   "scripts": {
-    "dev": "tsx src/chat.ts",
-    "chat": "tsx src/chat.ts chat",
-    "check": "tsx src/chat.ts check",
-    "schedule": "tsx src/chat.ts schedule",
+    "dev": "tsx src/cli.ts",
+    "chat": "tsx src/cli.ts chat",
+    "check": "tsx src/cli.ts check",
+    "schedule": "tsx src/cli.ts schedule",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

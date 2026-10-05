@@ -23,6 +23,8 @@ cp .env.example .env      # then check ALLOWED_ROOT
 
 ## Commands
 
+Every command belongs to a **skill**. Today there is one skill, `files`. You can write `npm run dev -- files organize` or just `npm run dev -- organize`; the short form works while only one skill has that command. `npm run dev -- help` lists everything.
+
 | Command | What it does | Moves files? |
 |---|---|---|
 | `npm run dev` | Dry-run plan sorted by file type only | No |
@@ -68,7 +70,7 @@ Files with no readable text (images, installers, scanned PDFs) are filed by type
 
 ## What it remembers
 
-Stored in `.state/memory.json`, written only after a run you approved:
+Stored per skill in `.state/files/memory.json`, written only after a run you approved:
 - Each approved folder as an average vector plus a file count (no file contents or names).
 - Your renames, so a name the model proposes again is translated to yours.
 
@@ -76,40 +78,59 @@ If the file is missing, corrupt, or made with a different embedding model, it si
 
 ## Scheduling the check (optional)
 
-`npm run schedule` prints a launchd job and the install commands. The job runs `check` every 6 hours. Installing it is your call, since it changes your system.
+`npm run schedule` prints a launchd job and the install commands. The job runs `check` (every skill's notify-only check) every 6 hours. Installing it is your call, since it changes your system.
 
 ## Project layout
 
 ```
 src/
-  chat.ts        CLI entry (plan, apply, organize, undo, chat, check, schedule)
-  config.ts      environment settings, validated
-  pathGuard.ts   the "stay inside the folder" check
-  scanner.ts     lists files
-  categories.ts  extension -> type folder
-  planner.ts     decides moves (pure, touches nothing)
-  executor.ts    performs moves + undo
-  journal.ts     write-ahead undo log
-  sensitive.ts   files that must never be read
-  extractor.ts   text from PDF/docx/etc.
-  embeddings.ts  Ollama embeddings
-  cluster.ts     similarity grouping
-  clusterText.ts what text gets embedded
-  namer.ts       LLM names a cluster, JSON-validated
-  taxonomy.ts    clusters -> named folders + review pile
-  review.ts      rename/merge/reject commands
-  memory.ts      learning across runs
-  organize.ts    ties the pipeline together
-  tools.ts       the seven tools the chat model can call
-  agent.ts       the tool-calling loop
-  check.ts       scheduled notify-only check
-  notify.ts      macOS notification
-  schedule.ts    launchd job generator
-  io.ts          shared terminal input
-tests/           one test file per area (89 tests)
-.state/          journals, memory, reports, lock (gitignored)
-archive/finance/ the original finance code (gitignored)
+  cli.ts                  entry point: finds the skill for a command and runs it
+  core/                   shared by every skill, knows nothing about files
+    skill.ts              the Skill contract, registry, command resolution
+    agent.ts              the tool-calling loop and the shared system prompt
+    chat.ts               interactive chat over all skills' tools
+    config.ts             shared settings (models, state folder)
+    io.ts                 terminal input (one reader, closed input = abort)
+    notify.ts schedule.ts macOS notification and launchd job generator
+    safety/               pathGuard (stay inside the folder), sensitive (never read secrets)
+    ai/                   cluster, embeddings
+  skills/
+    files/                the file organizer, as the first skill
+      index.ts            the skill definition (name, tools, commands, check)
+      config.ts commands.ts migrate.ts
+      scanner categories planner executor journal extractor
+      clusterText namer taxonomy review memory organize tools check
+tests/                    mirrors src/ (core/ and skills/files/)
+.state/<skill>/           each skill's journals, memory, reports (gitignored)
+archive/finance/          the original finance code (gitignored)
 ```
+
+Existing state from before skills (`.state/journals`, `.state/memory.json`) is moved into `.state/files/` automatically the first time you run any command. Nothing is overwritten.
+
+## Adding a skill
+
+A skill is one object. Build it under `src/skills/<name>/` and add it to the list in `src/cli.ts`.
+
+```ts
+export const notesSkill: Skill = {
+  name: 'notes',                       // lowercase, digits, dashes
+  description: 'Keep short notes.',
+  prompt: 'Use notes_add when the user asks you to remember something.',
+  commands: { list: { description: 'List notes', run: async (ctx) => {} } },
+  tools: (ctx) => [ /* Tool objects: name, description, zod schema, run */ ],
+  check: async (ctx) => 'one line for the log',   // optional, scheduled, notify-only
+};
+```
+
+Rules every skill follows:
+- **Prefix tool names with the skill name** (`notes_add`). The core refuses to start if two skills share a tool name.
+- **Tools take no file paths or secrets.** The model names things by number or short text, and only code builds paths.
+- **Anything that changes the outside world calls `ctx.confirm(...)` first.** That's a typed `yes` from the human, not something the model can answer.
+- **Keep state in `ctx.stateDir`**, which is private to the skill.
+- **Read your own settings lazily**, inside tools and commands, so a missing setting in one skill never breaks another.
+- **Scheduled `check` is notify-only.** It must never change anything.
+
+`tests/core/secondSkill.test.ts` contains a small working example skill that you can copy.
 
 ## Known limits
 
