@@ -2,6 +2,7 @@ import type { Message } from 'ollama';
 import { BASE_PROMPT, ollamaModel, runTurn } from './agent.js';
 import type { IO } from './io.js';
 import { collectTools, composeSystemPrompt, type Skill, type SkillContext } from './skill.js';
+import { errorMessage } from './util.js';
 
 /** Interactive chat across every registered skill. The model only ever sees tools; humans approve changes. */
 export async function runChat(opts: {
@@ -23,7 +24,7 @@ export async function runChat(opts: {
       const reply = await runTurn(model, tools, messages, line, { onTool: (name) => console.log(`  [tool: ${name}]`) });
       console.log(`\nagent> ${reply}`);
     } catch (err) {
-      console.log(`\nagent> Sorry, the model failed (${err instanceof Error ? err.message : err}). Is Ollama running?`);
+      console.log(`\nagent> Sorry, the model failed (${errorMessage(err)}). Is Ollama running?`);
     }
   }
 }

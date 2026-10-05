@@ -3,6 +3,7 @@ import path from 'node:path';
 import { append, createJournal, readJournal } from './journal.js';
 import { resolveInside } from '../../core/safety/pathGuard.js';
 import type { Move } from './planner.js';
+import { errorMessage } from '../../core/util.js';
 
 export interface ExecResult {
   journalFile: string;
@@ -50,7 +51,7 @@ export function execute(root: string, moves: Move[], stateDir: string): ExecResu
       safeMove(from, to);
       result.moved++;
     } catch (err) {
-      skip(err instanceof Error ? err.message : String(err));
+      skip(errorMessage(err));
     }
   }
   return result;
@@ -83,7 +84,7 @@ export function undo(journalFile: string): UndoResult {
         }
       }
     } catch (err) {
-      result.skipped.push({ from: m.from, to: m.to, reason: err instanceof Error ? err.message : String(err) });
+      result.skipped.push({ from: m.from, to: m.to, reason: errorMessage(err) });
     }
   }
   append(journalFile, { type: 'undone', at: new Date().toISOString() });

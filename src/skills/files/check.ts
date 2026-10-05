@@ -3,6 +3,7 @@ import path from 'node:path';
 import { categorize } from './categories.js';
 import type { KnownSummary } from './organize.js';
 import type { FileInfo } from './scanner.js';
+import { errorMessage, readJson, writeJsonAtomic } from '../../core/util.js';
 
 export interface CheckDeps {
   root: string;
@@ -41,13 +42,7 @@ function acquireLock(file: string, now: Date): (() => void) | undefined {
   return undefined;
 }
 
-function readState(file: string): { lastNotifiedAt?: string } {
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf8'));
-  } catch {
-    return {};
-  }
-}
+const readState = (file: string) => (readJson(file) ?? {}) as { lastNotifiedAt?: string };
 
 /**
  * The scheduled, autonomous part. NOTIFY-ONLY: it never moves, renames or deletes anything.
@@ -104,9 +99,9 @@ export async function runCheck(d: CheckDeps): Promise<CheckResult> {
       await d.notify('File Organizer', message);
     } catch (err) {
       // don't record the notification, so the next run tries again
-      return { status: 'notify-failed', loose: loose.length, error: err instanceof Error ? err.message : String(err) };
+      return { status: 'notify-failed', loose: loose.length, error: errorMessage(err) };
     }
-    fs.writeFileSync(stateFile, JSON.stringify({ lastNotifiedAt: d.now.toISOString() }));
+    writeJsonAtomic(stateFile, { lastNotifiedAt: d.now.toISOString() });
     return { status: 'notified', loose: loose.length, report, message };
   } finally {
     release();

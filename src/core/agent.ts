@@ -1,6 +1,7 @@
 import { Ollama, type Message, type Tool as OllamaTool } from 'ollama';
 import { z } from 'zod';
 import type { Tool } from './skill.js';
+import { errorMessage } from './util.js';
 
 /** Rules that apply to every skill. Each skill adds its own workflow guidance on top. */
 export const BASE_PROMPT = `You are a careful personal assistant. You act only through the tools provided.
@@ -66,7 +67,7 @@ export async function runTurn(
           try {
             result = await tool.run(parsed.data);
           } catch (err) {
-            result = `Error: ${err instanceof Error ? err.message : String(err)}`;
+            result = `Error: ${errorMessage(err)}`;
           }
         }
       }

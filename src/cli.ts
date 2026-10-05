@@ -7,6 +7,7 @@ import { macNotify } from './core/notify.js';
 import { buildPlist, installInstructions } from './core/schedule.js';
 import { createRegistry, resolveCommand, type Skill, type SkillContext } from './core/skill.js';
 import { filesSkill } from './skills/files/index.js';
+import { errorMessage } from './core/util.js';
 
 /** To add a skill: build it under src/skills/<name>/ and add it to this list. */
 const skills = createRegistry([filesSkill]);
@@ -57,7 +58,7 @@ async function main(): Promise<void> {
         try {
           console.log(`[${new Date().toISOString()}] ${s.name}: ${await s.check(ctxFor(s))}`);
         } catch (err) {
-          console.log(`[${new Date().toISOString()}] ${s.name}: check failed: ${err instanceof Error ? err.message : err}`);
+          console.log(`[${new Date().toISOString()}] ${s.name}: check failed: ${errorMessage(err)}`);
           process.exitCode = 1;
         }
       }
@@ -82,6 +83,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+  console.error(errorMessage(err));
   process.exitCode = 1;
 });
