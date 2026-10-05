@@ -49,3 +49,63 @@ describe('clusterRecursive', () => {
     expect(clusterRecursive(same, 0.8, { maxSize: 5 })).toEqual([Array.from({ length: 20 }, (_, i) => i)]);
   });
 });
+
+/** The original, obviously-correct O(n^3) algorithm. The fast one must always agree with it. */
+function naiveClusterVectors(vectors: number[][], threshold: number): number[][] {
+  const sim = vectors.map((a) => vectors.map((b) => cosineSimilarity(a, b)));
+  let clusters: number[][] = vectors.map((_, i) => [i]);
+  const linkage = (a: number[], b: number[]) => {
+    let total = 0;
+    for (const i of a) for (const j of b) total += sim[i]![j]!;
+    return total / (a.length * b.length);
+  };
+  while (clusters.length > 1) {
+    let best = -Infinity, bi = -1, bj = -1;
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const s = linkage(clusters[i]!, clusters[j]!);
+        if (s > best) [best, bi, bj] = [s, i, j];
+      }
+    }
+    if (best < threshold) break;
+    clusters[bi] = [...clusters[bi]!, ...clusters[bj]!];
+    clusters = clusters.filter((_, k) => k !== bj);
+  }
+  return clusters.map((c) => c.sort((a, b) => a - b)).sort((a, b) => b.length - a.length);
+}
+
+describe('clusterVectors matches the straightforward algorithm', () => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296);
+
+  function randomSet(): number[][] {
+    const n = 1 + Math.floor(rnd() * 40);
+    const dim = 2 + Math.floor(rnd() * 8);
+    const centres = Array.from({ length: 1 + Math.floor(rnd() * 5) }, () => Array.from({ length: dim }, () => rnd() - 0.5));
+    const noise = rnd() * 0.5;
+    const set = Array.from({ length: n }, () => centres[Math.floor(rnd() * centres.length)]!.map((x) => x + (rnd() - 0.5) * noise));
+    // nasty cases: exact duplicates and all-zero vectors
+    for (let i = 0; i < n; i++) {
+      if (rnd() < 0.15) set[i] = [...set[Math.floor(rnd() * n)]!];
+      if (rnd() < 0.05) set[i] = new Array<number>(dim).fill(0);
+    }
+    return set;
+  }
+
+  it('gives identical groupings on 400 random inputs across thresholds', () => {
+    for (let t = 0; t < 400; t++) {
+      const set = randomSet();
+      for (const threshold of [-1, 0, 0.3, 0.7, 0.9, 0.99, 1.01]) {
+        expect(clusterVectors(set, threshold), `case ${t}, threshold ${threshold}`).toEqual(naiveClusterVectors(set, threshold));
+      }
+    }
+  });
+
+  it('is much faster on a larger input than the straightforward version could manage', () => {
+    const big = Array.from({ length: 600 }, (_, i) => [Math.cos(i % 12), Math.sin(i % 12), rnd() * 0.05, rnd() * 0.05]);
+    const t0 = performance.now();
+    const clusters = clusterVectors(big, 0.9);
+    expect(performance.now() - t0).toBeLessThan(2000);
+    expect(clusters.reduce((n, c) => n + c.length, 0)).toBe(600);
+  });
+});
