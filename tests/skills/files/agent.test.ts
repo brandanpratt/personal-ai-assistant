@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import type { Message } from 'ollama';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -9,6 +8,7 @@ import { loadMemory } from '../../../src/skills/files/memory.js';
 import type { Proposal } from '../../../src/skills/files/organize.js';
 import { scan } from '../../../src/skills/files/scanner.js';
 import { createTools, type SessionDeps } from '../../../src/skills/files/tools.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let base: string, root: string, state: string;
 let confirmAnswer = true;
@@ -42,7 +42,7 @@ const fresh = (): Message[] => [{ role: 'system', content: BASE_PROMPT }];
 const exists = (rel: string) => fs.existsSync(path.join(root, rel));
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-')));
+  base = makeTempDir('agent');
   root = path.join(base, 'root');
   state = path.join(base, 'state');
   fs.mkdirSync(root);
@@ -50,7 +50,7 @@ beforeEach(() => {
   confirmAnswer = true;
   confirmCalls = 0;
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('tool design', () => {
   it('exposes no tool parameter that could carry a file path', () => {

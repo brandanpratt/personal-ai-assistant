@@ -1,21 +1,18 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { categorize } from '../../../src/skills/files/categories.js';
 import { planMoves } from '../../../src/skills/files/planner.js';
 import { scan } from '../../../src/skills/files/scanner.js';
+import { makeTempDir, removeDir, writeFile } from '../../helpers/fs.js';
 
 let root: string;
-const touch = (rel: string) => {
-  fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-  fs.writeFileSync(path.join(root, rel), 'x');
-};
+const touch = (rel: string) => writeFile(root, rel);
 
 beforeEach(() => {
-  root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'plan-')));
+  root = makeTempDir('plan');
 });
-afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+afterEach(() => removeDir(root));
 
 describe('categorize', () => {
   it('maps known extensions and returns undefined otherwise', () => {

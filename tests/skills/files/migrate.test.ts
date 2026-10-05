@@ -1,8 +1,8 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { migrateLegacyState } from '../../../src/skills/files/migrate.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let base: string, skillDir: string;
 const w = (rel: string, body = 'x') => {
@@ -12,10 +12,10 @@ const w = (rel: string, body = 'x') => {
 const read = (rel: string) => fs.readFileSync(path.join(base, rel), 'utf8');
 
 beforeEach(() => {
-  base = fs.mkdtempSync(path.join(os.tmpdir(), 'migrate-'));
+  base = makeTempDir('migrate');
   skillDir = path.join(base, 'files');
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('migrateLegacyState', () => {
   it('moves legacy journals and memory into the skill folder, contents intact', () => {

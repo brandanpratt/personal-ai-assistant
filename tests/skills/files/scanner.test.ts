@@ -1,14 +1,14 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { scan } from '../../../src/skills/files/scanner.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let base: string;
 let root: string;
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'scan-')));
+  base = makeTempDir('scan');
   root = path.join(base, 'root');
   fs.mkdirSync(path.join(root, 'sub'), { recursive: true });
   fs.writeFileSync(path.join(root, 'Photo.PNG'), 'xx');
@@ -19,7 +19,7 @@ beforeEach(() => {
   fs.writeFileSync(path.join(base, 'outside', 'secret.txt'), 's');
   fs.symlinkSync(path.join(base, 'outside'), path.join(root, 'link'));
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('scan', () => {
   it('lists root-level files only by default, with metadata', async () => {

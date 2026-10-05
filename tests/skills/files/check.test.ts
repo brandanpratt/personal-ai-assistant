@@ -1,9 +1,9 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { runCheck, type CheckDeps } from '../../../src/skills/files/check.js';
 import { scan } from '../../../src/skills/files/scanner.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let base: string, root: string, state: string;
 let notes: { title: string; text: string }[];
@@ -26,13 +26,13 @@ const deps = (over: Partial<CheckDeps> = {}): CheckDeps => ({
 const listing = () => fs.readdirSync(root).sort().join(',');
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'check-')));
+  base = makeTempDir('check');
   root = path.join(base, 'root');
   state = path.join(base, 'state');
   fs.mkdirSync(root);
   notes = [];
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('runCheck', () => {
   it('stays quiet below the threshold', async () => {

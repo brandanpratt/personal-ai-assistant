@@ -1,16 +1,16 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { extractText } from '../../../src/skills/files/extractor.js';
 import { isSensitive } from '../../../src/core/safety/sensitive.js';
 import { scan } from '../../../src/skills/files/scanner.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let dir: string;
 beforeEach(() => {
-  dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'extract-')));
+  dir = makeTempDir('extract');
 });
-afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+afterEach(() => removeDir(dir));
 
 async function textOf(name: string, body: string | Buffer, maxChars?: number) {
   fs.writeFileSync(path.join(dir, name), body);

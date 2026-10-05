@@ -1,18 +1,14 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import os from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Doc } from '../../../src/skills/files/clusterText.js';
 import { planMoves } from '../../../src/skills/files/planner.js';
 import { applyEdit, parseCommand, toPlacement } from '../../../src/skills/files/review.js';
 import { scan } from '../../../src/skills/files/scanner.js';
 import type { Taxonomy } from '../../../src/skills/files/taxonomy.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
+import { makeDoc } from '../../helpers/docs.js';
 
-const doc = (name: string): Doc => ({
-  file: { path: `/r/${name}`, name, ext: 'pdf', size: 1, modified: new Date(0) },
-  text: '',
-  embedInput: '',
-});
+const doc = (name: string) => makeDoc(name);
 const tax = (): Taxonomy => ({
   folders: [
     { name: 'Resumes', docs: [doc('a.pdf'), doc('b.pdf')] },
@@ -73,9 +69,9 @@ describe('applyEdit', () => {
 describe('topic-aware planMoves', () => {
   let root: string;
   beforeEach(() => {
-    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'topic-')));
+    root = makeTempDir('topic');
   });
-  afterEach(() => fs.rmSync(root, { recursive: true, force: true }));
+  afterEach(() => removeDir(root));
 
   it('nests topic folders inside type folders and sends review files to _review', async () => {
     for (const n of ['cv.pdf', 'bill.pdf', 'weird.pdf', 'pic.png']) fs.writeFileSync(path.join(root, n), 'x');

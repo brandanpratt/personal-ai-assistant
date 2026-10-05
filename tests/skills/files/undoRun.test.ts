@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { execute } from '../../../src/skills/files/executor.js';
@@ -7,15 +6,13 @@ import { emptyMemory, hasMemorySnapshot, loadMemory, restoreMemoryBeforeRun, sav
 import { planMoves } from '../../../src/skills/files/planner.js';
 import { scan } from '../../../src/skills/files/scanner.js';
 import { describeUndo, undoRun } from '../../../src/skills/files/undoRun.js';
+import { makeTempDir, removeDir, writeFile } from '../../helpers/fs.js';
 
 let base: string, root: string, state: string, memFile: string;
 const MODEL = 'm';
 const mem = (...names: string[]): Memory => ({ ...emptyMemory(MODEL), folders: names.map((name) => ({ name, centroid: [1, 0], count: 2 })) });
 const names = () => loadMemory(memFile, MODEL).folders.map((f) => f.name);
-const write = (rel: string) => {
-  fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-  fs.writeFileSync(path.join(root, rel), 'x');
-};
+const write = (rel: string, body?: string) => writeFile(root, rel, body);
 /** Runs a type-only plan and records `after` as learned memory, like an approved organize run. */
 async function run(after: Memory | undefined) {
   const res = execute(root, planMoves(root, await scan(root)).moves, state);
@@ -24,13 +21,13 @@ async function run(after: Memory | undefined) {
 }
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'undorun-')));
+  base = makeTempDir('undorun');
   root = path.join(base, 'root');
   state = path.join(base, 'state');
   memFile = path.join(state, 'memory.json');
   fs.mkdirSync(root);
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('memory snapshots', () => {
   it('restore deletes the memory file when there was none before the run', () => {

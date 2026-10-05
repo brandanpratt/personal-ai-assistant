@@ -1,15 +1,11 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Doc } from '../../../src/skills/files/clusterText.js';
 import { applyAlias, emptyMemory, learn, loadMemory, matchKnown, saveMemory } from '../../../src/skills/files/memory.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
+import { makeDoc } from '../../helpers/docs.js';
 
-const doc = (name: string): Doc => ({
-  file: { path: `/r/${name}`, name, ext: 'pdf', size: 1, modified: new Date(0) },
-  text: '',
-  embedInput: '',
-});
+const doc = (name: string) => makeDoc(name);
 const vecs = (entries: Record<string, number[]>) => new Map(Object.entries(entries).map(([n, v]) => [`/r/${n}`, v]));
 
 describe('learn', () => {
@@ -57,10 +53,10 @@ describe('persistence', () => {
   let dir: string;
   let file: string;
   beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mem-'));
+    dir = makeTempDir('mem');
     file = path.join(dir, 'state', 'memory.json');
   });
-  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+  afterEach(() => removeDir(dir));
 
   it('round-trips and writes atomically', () => {
     const m = { ...emptyMemory('m'), folders: [{ name: 'Resumes', centroid: [1, 2], count: 3 }] };

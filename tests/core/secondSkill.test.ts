@@ -1,11 +1,11 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { z } from 'zod';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BASE_PROMPT, runTurn, type ModelFn } from '../../src/core/agent.js';
 import { collectTools, createRegistry, resolveCommand, type Skill, type SkillContext } from '../../src/core/skill.js';
 import { filesSkill } from '../../src/skills/files/index.js';
+import { makeTempDir, removeDir } from '../helpers/fs.js';
 
 /**
  * A toy second skill. It doubles as the template for real ones: tools prefixed with the skill name,
@@ -43,13 +43,13 @@ const ctxFor = (s: Skill): SkillContext => ({
 });
 
 beforeEach(() => {
-  base = fs.mkdtempSync(path.join(os.tmpdir(), 'skills-'));
+  base = makeTempDir('skills');
   vi.stubEnv('ALLOWED_ROOT', base);
   approve = true;
 });
 afterEach(() => {
   vi.unstubAllEnvs();
-  fs.rmSync(base, { recursive: true, force: true });
+  removeDir(base);
 });
 
 describe('two skills side by side', () => {

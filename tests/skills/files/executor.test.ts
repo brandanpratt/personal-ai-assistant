@@ -1,28 +1,25 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { execute, undo } from '../../../src/skills/files/executor.js';
 import { latestUndoable, readJournal } from '../../../src/skills/files/journal.js';
 import { planMoves } from '../../../src/skills/files/planner.js';
 import { scan } from '../../../src/skills/files/scanner.js';
+import { makeTempDir, removeDir, writeFile } from '../../helpers/fs.js';
 
 let base: string;
 let root: string;
 let state: string;
-const write = (rel: string, body = 'x') => {
-  fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-  fs.writeFileSync(path.join(root, rel), body);
-};
+const write = (rel: string, body?: string) => writeFile(root, rel, body);
 const exists = (rel: string) => fs.existsSync(path.join(root, rel));
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'exec-')));
+  base = makeTempDir('exec');
   root = path.join(base, 'root');
   state = path.join(base, 'state');
   fs.mkdirSync(root);
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 const run = async () => execute(root, planMoves(root, await scan(root)).moves, state);
 

@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Doc } from '../../../src/skills/files/clusterText.js';
 import { buildPrompt, createNamer, parseNameResponse } from '../../../src/skills/files/namer.js';
 import { buildTaxonomy, type NameFn } from '../../../src/skills/files/taxonomy.js';
+import { makeDoc } from '../../helpers/docs.js';
 
-const doc = (name: string): Doc => ({
-  file: { path: `/x/${name}`, name, ext: 'pdf', size: 1, modified: new Date(0) },
-  text: `text of ${name}`,
-  embedInput: name,
-});
+const doc = (name: string) => makeDoc(name);
 
 describe('parseNameResponse', () => {
   it('accepts a valid reply', () => {

@@ -1,22 +1,22 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PathEscapeError, resolveInside } from '../../../src/core/safety/pathGuard.js';
+import { makeTempDir, removeDir } from '../../helpers/fs.js';
 
 let base: string;
 let root: string;
 let outside: string;
 
 beforeEach(() => {
-  base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'guard-')));
+  base = makeTempDir('guard');
   root = path.join(base, 'root');
   outside = path.join(base, 'outside');
   fs.mkdirSync(root);
   fs.mkdirSync(outside);
   fs.writeFileSync(path.join(root, 'a.txt'), 'a');
 });
-afterEach(() => fs.rmSync(base, { recursive: true, force: true }));
+afterEach(() => removeDir(base));
 
 describe('resolveInside', () => {
   it('accepts existing and relative paths inside root', () => {
