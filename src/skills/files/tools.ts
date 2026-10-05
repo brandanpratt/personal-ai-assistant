@@ -1,14 +1,12 @@
-import path from 'node:path';
 import { z } from 'zod';
-import { execute } from './executor.js';
-import { latestUndoable } from './journal.js';
-import { learn, loadMemory, saveLearnedMemory } from './memory.js';
+import { executeAndLearn, moveQuestion } from './apply.js';
+import { loadMemory, memoryFilePath } from './memory.js';
 import type { Tool } from '../../core/skill.js';
 import type { Proposal } from './organize.js';
 import { formatPlanSummary, planMoves } from './planner.js';
 import { applyEdit, formatTaxonomy, toPlacement } from './review.js';
 import { scan, type FileInfo } from './scanner.js';
-import { describeUndo, undoRun } from './undoRun.js';
+import { describeUndo, undoLatest } from './undoRun.js';
 import type { Taxonomy } from './taxonomy.js';
 
 /**
@@ -31,7 +29,7 @@ export interface SessionDeps {
 
 export function createTools(deps: SessionDeps): Tool[] {
   const { root, stateDir, confirm, log } = deps;
-  const memoryFile = path.join(stateDir, 'memory.json');
+  const memoryFile = memoryFilePath(stateDir);
   let proposal: Proposal | undefined;
   let taxonomy: Taxonomy | undefined;
 
@@ -113,12 +111,9 @@ export function createTools(deps: SessionDeps): Tool[] {
         const plan = await currentPlan();
         if (plan.moves.length === 0) return 'Nothing to move.';
         console.log(`\n${formatPlanSummary(root, plan, 'About to move:')}`);
-        if (!(await confirm(`\nMove ${plan.moves.length} files in ${root}?`))) return 'The user declined. Nothing was moved.';
-        const res = execute(root, plan.moves, stateDir);
-        if (res.moved > 0 && proposal && taxonomy) {
-          const before = loadMemory(memoryFile, deps.embedModel);
-          saveLearnedMemory(memoryFile, res.journalFile, before, learn(before, proposal.taxonomy, taxonomy, proposal.vectors));
-        }
+        if (!(await confirm(moveQuestion(plan.moves.length, root)))) return 'The user declined. Nothing was moved.';
+        const learned = proposal && taxonomy ? { proposal, taxonomy } : undefined;
+        const res = executeAndLearn({ root, moves: plan.moves, stateDir, embedModel: deps.embedModel, learned });
         proposal = taxonomy = undefined;
         return `Moved ${res.moved}, skipped ${res.skipped.length}. The run can be undone with undo_last_run.`;
       },
@@ -128,10 +123,10 @@ export function createTools(deps: SessionDeps): Tool[] {
       description: 'Reverse the most recent run that has not been undone, and forget the folders it learned. The user is asked to type "yes" first.',
       schema: z.object({}),
       run: async () => {
-        const file = latestUndoable(stateDir);
-        if (!file) return 'There is nothing to undo.';
-        if (!(await confirm('\nUndo the most recent run?'))) return 'The user declined. Nothing was undone.';
-        return describeUndo(undoRun(file, memoryFile));
+        const out = await undoLatest(stateDir, confirm, () => '\nUndo the most recent run?');
+        if (out.status === 'none') return 'There is nothing to undo.';
+        if (out.status === 'declined') return 'The user declined. Nothing was undone.';
+        return describeUndo(out.result);
       },
     },
   ];

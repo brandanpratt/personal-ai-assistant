@@ -1,19 +1,18 @@
-import path from 'node:path';
 import type { Command, SkillContext } from '../../core/skill.js';
 import { loadFilesConfig } from './config.js';
-import { execute } from './executor.js';
-import { latestUndoable } from './journal.js';
-import { learn, loadMemory, saveLearnedMemory } from './memory.js';
+import { executeAndLearn, moveQuestion, type Learned } from './apply.js';
+import { loadMemory, memoryFilePath } from './memory.js';
 import { proposeTaxonomy } from './organize.js';
 import { formatPlan, formatPlanSummary, planMoves, type Plan } from './planner.js';
 import { applyEdit, formatTaxonomy, parseCommand, toPlacement } from './review.js';
 import { scan } from './scanner.js';
-import { describeUndo, undoRun } from './undoRun.js';
+import { describeUndo, undoLatest } from './undoRun.js';
 
-function runMoves(root: string, moves: Plan['moves'], ctx: SkillContext) {
-  const res = execute(root, moves, ctx.stateDir);
+function runMoves(root: string, moves: Plan['moves'], ctx: SkillContext, learned?: Learned) {
+  const res = executeAndLearn({ root, moves, stateDir: ctx.stateDir, embedModel: ctx.models.embed, learned });
   console.log(`Moved ${res.moved}, skipped ${res.skipped.length}. Journal: ${res.journalFile}`);
   for (const s of res.skipped) console.log(`  skipped ${s.move.from}: ${s.reason}`);
+  if (res.learnedFolders) console.log(`Remembered your folders in ${memoryFilePath(ctx.stateDir)}`);
   console.log('Undo with: npm run dev -- undo');
   return res;
 }
@@ -32,7 +31,7 @@ const apply: Command = {
     const { allowedRoot: root } = loadFilesConfig();
     const p = planMoves(root, await scan(root));
     console.log(formatPlan(root, p));
-    if (p.moves.length > 0 && (await ctx.confirm(`\nMove ${p.moves.length} files in ${root}?`))) runMoves(root, p.moves, ctx);
+    if (p.moves.length > 0 && (await ctx.confirm(moveQuestion(p.moves.length, root)))) runMoves(root, p.moves, ctx);
     else console.log('Nothing done.');
   },
 };
@@ -41,9 +40,8 @@ const organize: Command = {
   description: 'Propose topic folders, let you edit them, then move after you type "yes".',
   run: async (ctx) => {
     const { allowedRoot: root } = loadFilesConfig();
-    const memoryFile = path.join(ctx.stateDir, 'memory.json');
     const files = await scan(root);
-    const memory = loadMemory(memoryFile, ctx.models.embed);
+    const memory = loadMemory(memoryFilePath(ctx.stateDir), ctx.models.embed);
     const proposal = await proposeTaxonomy(files, memory, ctx.log, ctx.models);
     let taxonomy = proposal.taxonomy;
     console.log(`\n${formatTaxonomy(taxonomy, proposal.remembered)}\n\nReview the topic folders. Commands: list | show <n> | rename <n> <name> | merge <from> <into> | reject <n> | done`);
@@ -67,26 +65,20 @@ const organize: Command = {
     }
     const p = planMoves(root, files, toPlacement(taxonomy));
     console.log(`\n${formatPlanSummary(root, p)}`);
-    if (p.moves.length > 0 && (await ctx.confirm(`\nMove ${p.moves.length} files in ${root}?`))) {
-      const res = runMoves(root, p.moves, ctx);
-      // learn only from a plan you approved and that actually ran
-      if (res.moved > 0) {
-        saveLearnedMemory(memoryFile, res.journalFile, memory, learn(memory, proposal.taxonomy, taxonomy, proposal.vectors));
-        console.log(`Remembered your folders in ${memoryFile}`);
-      }
-    } else console.log('Nothing done.');
+    // learning happens inside runMoves, and only for a plan you approved that actually moved something
+    if (p.moves.length > 0 && (await ctx.confirm(moveQuestion(p.moves.length, root)))) runMoves(root, p.moves, ctx, { proposal, taxonomy });
+    else console.log('Nothing done.');
   },
 };
 
 const undoCommand: Command = {
   description: 'Reverse the most recent run, after you type "yes".',
   run: async (ctx) => {
-    const file = latestUndoable(ctx.stateDir);
-    if (!file) return console.log('Nothing to undo.');
-    if (!(await ctx.confirm(`Undo the run recorded in ${file}?`))) return console.log('Nothing done.');
-    const res = undoRun(file, path.join(ctx.stateDir, 'memory.json'));
-    console.log(describeUndo(res));
-    for (const s of res.skipped) console.log(`  skipped ${s.to}: ${s.reason}`);
+    const out = await undoLatest(ctx.stateDir, ctx.confirm, (file) => `Undo the run recorded in ${file}?`);
+    if (out.status === 'none') return console.log('Nothing to undo.');
+    if (out.status === 'declined') return console.log('Nothing done.');
+    console.log(describeUndo(out.result));
+    for (const s of out.result.skipped) console.log(`  skipped ${s.to}: ${s.reason}`);
   },
 };
 

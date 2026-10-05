@@ -1,5 +1,6 @@
 import { undo, type UndoResult } from './executor.js';
-import { hasMemorySnapshot, restoreMemoryBeforeRun } from './memory.js';
+import { latestUndoable } from './journal.js';
+import { hasMemorySnapshot, memoryFilePath, restoreMemoryBeforeRun } from './memory.js';
 
 export interface UndoRunResult extends UndoResult {
   /** forgot: folders learned in that run were removed. kept: undo was partial, so they were kept. none: the run learned nothing. */
@@ -22,4 +23,18 @@ export function undoRun(journalFile: string, memoryFile: string): UndoRunResult 
 export function describeUndo(r: UndoRunResult): string {
   const note = { forgot: ' Forgot the folders learned in that run.', kept: ' Some files could not be restored, so the folders learned in that run were kept.', none: '' }[r.memory];
   return `Restored ${r.restored}, skipped ${r.skipped.length}.${note}`;
+}
+
+export type UndoOutcome = { status: 'none' } | { status: 'declined' } | { status: 'done'; result: UndoRunResult };
+
+/** Finds the latest undoable run, asks the human (via `question`), and undoes it. Callers only format the words. */
+export async function undoLatest(
+  stateDir: string,
+  confirm: (question: string) => Promise<boolean>,
+  question: (journalFile: string) => string,
+): Promise<UndoOutcome> {
+  const file = latestUndoable(stateDir);
+  if (!file) return { status: 'none' };
+  if (!(await confirm(question(file)))) return { status: 'declined' };
+  return { status: 'done', result: undoRun(file, memoryFilePath(stateDir)) };
 }
