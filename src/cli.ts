@@ -6,11 +6,12 @@ import { createIO } from './core/io.js';
 import { macNotify } from './core/notify.js';
 import { buildPlist, installInstructions } from './core/schedule.js';
 import { createRegistry, resolveCommand, type Skill, type SkillContext } from './core/skill.js';
+import { emailSkill } from './skills/email/index.js';
 import { filesSkill } from './skills/files/index.js';
 import { errorMessage } from './core/util.js';
 
 /** To add a skill: build it under src/skills/<name>/ and add it to this list. */
-const skills = createRegistry([filesSkill]);
+const skills = createRegistry([filesSkill, emailSkill]);
 
 function help(): string {
   const lines = [

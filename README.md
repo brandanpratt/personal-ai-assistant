@@ -1,8 +1,8 @@
 # Personal AI Assistant
 
-A local, privacy-first personal assistant. Its first skill is organizing your Downloads folder. It sorts files by type, then by topic (`Documents/Resumes/`), learns the folders you approve, and can nudge you when files pile up.
+A local, privacy-first personal assistant. Its first skill is organizing your Downloads folder. It sorts files by type, then by topic (`Documents/Resumes/`), learns the folders you approve, and can nudge you when files pile up. A second skill, `email`, reads Gmail and Outlook (read-only, in progress).
 
-Everything runs on your machine with Ollama. No file content leaves your computer.
+Everything runs on your machine with Ollama. No file content leaves your computer. The email skill talks only to Google and Microsoft, to fetch your own mail.
 
 See [CHANGELOG.md](CHANGELOG.md) for what has changed.
 
@@ -25,7 +25,7 @@ cp .env.example .env      # then check ALLOWED_ROOT
 
 ## Commands
 
-Every command belongs to a **skill**. Today there is one skill, `files`. You can write `npm run dev -- files organize` or just `npm run dev -- organize`; the short form works while only one skill has that command. `npm run dev -- help` lists everything.
+Every command belongs to a **skill**: `files` or `email`. You can write `npm run dev -- files organize` or just `npm run dev -- organize`; the short form works while only one skill has that command. `npm run dev -- help` lists everything.
 
 | Command | What it does | Moves files? |
 |---|---|---|
@@ -37,6 +37,23 @@ Every command belongs to a **skill**. Today there is one skill, `files`. You can
 | `npm run check` | Scheduled check: counts loose files and sends a notification if they've piled up | **Never** |
 | `npm run schedule` | Prints a macOS launchd job for `check`. You install it yourself | Never |
 | `npm test` / `npm run typecheck` | Test suite and type check | No |
+
+### Email (read-only)
+
+First do the one-time setup in [docs/email-setup.md](docs/email-setup.md).
+
+| Command | What it does |
+|---|---|
+| `npm run dev -- email connect gmail` | Opens Google sign-in in your browser |
+| `npm run dev -- email connect outlook` | Shows a short code to enter at microsoft.com/devicelogin |
+| `npm run dev -- email status` | Lists connected accounts and checks each sign-in still works |
+| `npm run dev -- email recent [n]` | Newest inbox messages: sender, subject, date, unread (default 10, max 50) |
+| `npm run dev -- email disconnect <n>` | Forgets an account on this Mac, after your `yes` |
+
+- **Read-only, enforced by Google and Microsoft.** It asks only for `gmail.readonly` and `Mail.Read`, so it can't send, delete, archive, or mark anything as read.
+- **Sign-in tokens live in the macOS Keychain** (entries named `personal-ai-assistant.email`), never in `.env` or `.state`. `.state/email/accounts.json` holds only the connected addresses.
+- **Email text is untrusted.** Control characters and hidden-direction tricks are stripped before anything is printed.
+- Disconnecting forgets the account on this Mac. To revoke access on the provider's side too, use the link it prints.
 
 In `organize`, the edit commands are: `list`, `show <n>`, `rename <n> <name>`, `merge <from> <into>`, `reject <n>`, `done`.
 
@@ -106,7 +123,12 @@ src/
       apply.ts undoRun.ts  the one shared way to run a plan and learn, and to undo and forget
       scanner categories planner executor journal extractor
       clusterText namer taxonomy review memory organize tools check
-tests/                    mirrors src/ (core/ and skills/files/); helpers/ holds shared test setup
+    email/                read-only Gmail and Outlook
+      index.ts commands.ts config.ts
+      gmail.ts outlook.ts  sign-in and inbox listing per provider
+      secrets.ts           Keychain storage for sign-in tokens
+      accounts.ts format.ts types.ts
+tests/                    mirrors src/ (core/, skills/files/, skills/email/); helpers/ holds shared test setup
 .state/<skill>/           each skill's journals, memory, reports (gitignored)
 archive/finance/          the original finance code (gitignored)
 ```

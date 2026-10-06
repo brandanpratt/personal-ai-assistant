@@ -13,6 +13,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@azure/msal-node": "^7.0.1",
+    "@napi-rs/keyring": "^2.1.0",
     "dotenv": "^18.0.5",
     "mammoth": "^1.13.0",
     "ollama": "^0.6.4",

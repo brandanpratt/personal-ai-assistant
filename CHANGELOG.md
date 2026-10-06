@@ -13,7 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `help` and `skills` commands list every skill and its commands.
 - **Undo now forgets what the run learned.** Each learning run saves a snapshot of the previous memory, and undoing the run restores it. A partial undo keeps the learning, because the unrestored files are still in those folders.
 - `docs/` and a `CHANGELOG.md`.
-- Setup guide for the upcoming read-only email skill (`docs/email-setup.md`): registering the app with Google (Gmail) and Microsoft (personal Outlook), plus new `.env.example` entries.
+- **Email skill (read-only), first step.** `email connect gmail|outlook` signs in through Google's or Microsoft's own pages, `email status` checks each sign-in, `email recent` lists the newest inbox messages, and `email disconnect` forgets an account. Sign-in tokens are kept in the macOS Keychain. Reading never marks mail as read.
+- Setup guide for the read-only email skill (`docs/email-setup.md`): registering the app with Google (Gmail) and Microsoft (personal Outlook), plus new `.env.example` entries.
 
 ### Changed
 - The entry point is `src/cli.ts` (was `src/chat.ts`). Commands are grouped by skill (`files organize`), and short forms such as `organize` still work while only one skill has that command.
