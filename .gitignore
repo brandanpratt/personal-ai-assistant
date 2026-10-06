@@ -11,3 +11,12 @@ google-credentials.json
 archive/
 # Runtime state (undo journals, etc.)
 .state/
+
+# Voice skill: audio and reference transcripts are personal (other people's voices). Never commit.
+*.ogg
+*.opus
+*.wav
+*.m4a
+*.mp3
+*.aiff
+voice-samples/
