@@ -19,6 +19,7 @@ npm run typecheck                          # tsc --noEmit, covers src/ and tests
 npm run dev -- <command>                   # run the CLI via tsx (e.g. `files organize`, `email recent 5`)
 npm run dev -- help                        # list every skill and command
 npm run chat                               # interactive chat over all skills' tools
+npm run hud                                # build and launch the floating HUD (Electron, see docs/hud-plan.md)
 ```
 
 Running the app needs Ollama with `llama3.1:8b` and `nomic-embed-text`, plus a `.env` copied from `.env.example`. `OLLAMA_MODEL` is required, and `ALLOWED_ROOT` defaults to `~/Downloads`. The tests don't need Ollama, the network or the Keychain, because models, `fetch`, MSAL and secrets are injected as fakes.

@@ -1,0 +1,65 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 340px;
+  height: 430px;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  font: 14px/1.4 -apple-system, system-ui, sans-serif;
+  color: #bfe6ff;
+}
+
+canvas {
+  position: absolute;
+  left: 20px;
+  top: 0;
+  width: 300px;
+  height: 300px;
+  display: block;
+}
+
+#reply {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 304px;
+  margin: 0;
+  min-height: 40px;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(90, 200, 255, 0.7);
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#reply.show { opacity: 1; }
+
+#ask {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 354px;
+  margin: 0;
+}
+
+#text {
+  width: 100%;
+  padding: 10px 16px;
+  font: inherit;
+  color: #eaf7ff;
+  background: rgba(8, 24, 40, 0.88);
+  border: 1px solid rgba(90, 200, 255, 0.6);
+  border-radius: 999px;
+  outline: none;
+  box-shadow: 0 0 16px rgba(90, 200, 255, 0.35);
+  user-select: text;
+  -webkit-user-select: text;
+}
+#text:focus { border-color: #8fe0ff; box-shadow: 0 0 22px rgba(90, 200, 255, 0.6); }
+#text::placeholder { color: #6a8fa8; }
+
+@media (prefers-reduced-motion: reduce) {
+  #reply { transition: none; }
+}

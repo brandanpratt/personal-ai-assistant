@@ -11,5 +11,5 @@
     "outDir": "dist",
     "noUnusedLocals": true
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "hud"]
 }

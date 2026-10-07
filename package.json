@@ -10,7 +10,9 @@
     "check": "tsx src/cli.ts check",
     "schedule": "tsx src/cli.ts schedule",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "hud:build": "tsx hud/build.ts",
+    "hud": "npm run hud:build && env -u ELECTRON_RUN_AS_NODE electron hud/dist/main.mjs"
   },
   "dependencies": {
     "@azure/msal-node": "^7.0.1",
@@ -23,6 +25,8 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "electron": "^44.6.0",
+    "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"

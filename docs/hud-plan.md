@@ -31,6 +31,7 @@ First user: the project owner. Everything runs locally.
 
 ## Principles
 
+- TypeScript only, no JavaScript sources, so the HUD gets the same type safety as the rest of the repo. `npm run hud:build` bundles `hud/` with esbuild into the git-ignored `hud/dist/`, and `npm run typecheck` covers `hud/`. The renderer and main process share one typed contract in `hud/shared/ipc.ts`, and the main process validates every IPC message with zod.
 - The HUD is a thin client. No skill logic in the renderer.
 - The renderer has no file or secret access. It only sends text and receives events.
 - State and animation are separate: a small state machine plus a continuous `amplitude` value (0-1).

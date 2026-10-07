@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<title>Assistant HUD</title>
+<link rel="stylesheet" href="hud.css">
+</head>
+<body>
+<canvas id="rings" aria-label="Assistant status rings"></canvas>
+<p id="reply" aria-live="polite"></p>
+<form id="ask" hidden>
+  <input id="text" type="text" autocomplete="off" spellcheck="false"
+         placeholder="Ask the assistant…" aria-label="Ask the assistant" maxlength="2000">
+</form>
+<script src="../dist/renderer.js"></script>
+</body>
+</html>

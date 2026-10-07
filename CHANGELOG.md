@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Floating HUD (preview).** `npm run hud` opens a transparent, always-on-top window with animated Jarvis-style rings. Press `Option+Space` (change it with `HUD_HOTKEY`) to type a question, `Esc` to close the box, and drag the rings to move them. The rings are click-through everywhere else, and the `◎` menu-bar item has Ask, Show/hide and Quit. It isn't connected to the assistant yet, so replies are a placeholder that shows the thinking and speaking animations.
 - **Skills architecture.** The project is now a shared `core/` plus self-contained skills under `skills/`. A skill declares its name, tools, CLI commands, prompt guidance and an optional scheduled check. The file organizer is the first skill (`skills/files/`). See "Adding a skill" in the README.
 - The core refuses to start if two skills use the same tool name, and each skill gets private state in `.state/<skill>/`.
 - `help` and `skills` commands list every skill and its commands.

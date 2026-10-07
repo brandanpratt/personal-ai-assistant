@@ -20,3 +20,6 @@ archive/
 *.mp3
 *.aiff
 voice-samples/
+
+# HUD build output
+hud/dist/
