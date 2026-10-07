@@ -95,13 +95,19 @@ function hideReply(): void {
 let activePrompt: { id: number; kind: "confirm" | "ask" } | null = null;
 let busy = false; // a turn is running
 
+function refreshPlaceholder(): void {
+  input.placeholder = activePrompt
+    ? activePrompt.kind === "confirm"
+      ? 'Type "yes" to approve, anything else cancels'
+      : "Type your answer"
+    : busy
+      ? "Working… (you can type your next message)"
+      : "Ask the assistant…";
+}
+
 function openInput(): void {
   form.hidden = false;
-  input.placeholder = !activePrompt
-    ? "Ask the assistant…"
-    : activePrompt.kind === "confirm"
-      ? 'Type "yes" to approve, anything else cancels'
-      : "Type your answer";
+  refreshPlaceholder();
   input.focus();
 }
 
@@ -120,6 +126,8 @@ function cancelPrompt(): void {
   showReply("Cancelled.", "reply", 3000);
   rings.setState("thinking");
 }
+
+window.hud.onOpenInput(openInput);
 
 window.hud.onToggleInput(() => {
   if (!form.hidden) {
@@ -144,19 +152,22 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
+  // The box stays open after sending, like a chat input: Esc or the hotkey closes it.
   if (activePrompt) {
     window.hud.answerPrompt(activePrompt.id, text);
     activePrompt = null;
     hideReply();
     rings.setState("thinking");
-    closeInput();
+    input.value = "";
+    refreshPlaceholder();
     return;
   }
-  if (busy) return; // keep the text; try again when the current turn finishes
+  if (busy) return; // keep the text; send it once the current turn finishes
   busy = true;
   hideReply();
   window.hud.submit(text);
-  closeInput();
+  input.value = "";
+  refreshPlaceholder();
 });
 
 // ---- agent events ----
@@ -193,6 +204,7 @@ window.hud.onEvent((event: HudEvent) => {
       break;
     case "reply":
       busy = false;
+      refreshPlaceholder();
       showReply(event.text, "reply", replyVisibleMs(event.text));
       void speak(event.text);
       break;
@@ -206,6 +218,7 @@ window.hud.onEvent((event: HudEvent) => {
       break;
     case "error":
       busy = false;
+      refreshPlaceholder();
       speakToken++;
       rings.setAmplitude(0);
       rings.setState("error");

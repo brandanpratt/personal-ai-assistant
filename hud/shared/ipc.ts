@@ -10,6 +10,7 @@ export const CHANNELS = {
   submit: "hud:submit",
   answerPrompt: "hud:answer-prompt",
   toggleInput: "hud:toggle-input",
+  openInput: "hud:open-input",
   event: "hud:event",
 } as const;
 
@@ -32,7 +33,10 @@ export interface HudApi {
   dragMove(dx: number, dy: number): void;
   dragEnd(): void;
   inputClosed(): void;
+  /** The hotkey: opens the input, or closes it if it is already open. */
   onToggleInput(cb: () => void): void;
+  /** Launch, tray "Ask…" or a second launch: opens the input and leaves it open. */
+  onOpenInput(cb: () => void): void;
 }
 
 declare global {

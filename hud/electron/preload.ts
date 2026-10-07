@@ -16,6 +16,9 @@ const api: HudApi = {
   onToggleInput: (cb) => {
     ipcRenderer.on(CHANNELS.toggleInput, () => cb());
   },
+  onOpenInput: (cb) => {
+    ipcRenderer.on(CHANNELS.openInput, () => cb());
+  },
 };
 
 contextBridge.exposeInMainWorld("hud", api);

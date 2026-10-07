@@ -96,19 +96,24 @@ function createWindow(): void {
   w.webContents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
 
   void w.loadFile(path.join(here, "..", "renderer", "index.html"));
-  w.once("ready-to-show", () => w.showInactive());
+  // Open ready to type, so launching the HUD never needs a second run or the hotkey first.
+  w.once("ready-to-show", summonInput);
   w.on("closed", () => {
     win = null;
     prompts.cancelAll();
   });
 }
 
-function summonInput(): void {
+/** Brings the window forward and sends the input a message (open it, or toggle it for the hotkey). */
+function focusInput(channel: typeof CHANNELS.openInput | typeof CHANNELS.toggleInput): void {
   if (!win) return;
   win.show();
   win.focus();
-  win.webContents.send(CHANNELS.toggleInput);
+  win.webContents.send(channel);
 }
+
+const summonInput = (): void => focusInput(CHANNELS.openInput);
+const toggleInput = (): void => focusInput(CHANNELS.toggleInput);
 
 function toggleVisible(): void {
   if (!win) return;
@@ -192,7 +197,7 @@ void app.whenReady().then(() => {
   app.dock?.hide();
   createWindow();
   createTray();
-  if (!globalShortcut.register(HOTKEY, summonInput)) {
+  if (!globalShortcut.register(HOTKEY, toggleInput)) {
     console.warn(`[hud] could not register hotkey ${HOTKEY}; use the tray menu or set HUD_HOTKEY`);
   }
 });
