@@ -23,10 +23,10 @@ First user: the project owner. Everything runs locally.
 
 ## Stages
 
-0. **Visual prototype, no agent.** Standalone canvas/WebGL page with a debug panel to switch states and drive an amplitude slider. Tune the look here first.
-1. **Electron shell.** Transparent always-on-top window (~300px), draggable, on all desktops, click-through while idle. Global hotkey (e.g. `Option+Space`) opens a small text input under the rings. Tray icon for quit and settings.
-2. **Agent bridge.** `runTurn` gets an optional event callback (`thinking`, `tool:<name>`, `reply`, `confirm`, `error`). The Electron main process runs the same skill registry as `cli.ts`. CLI behavior is unchanged. Tested with a scripted fake model.
-3. **Reactive motion.** Thinking and tool-call animation, reply pulse, and the confirm flow (the HUD shows the action and the human types `yes`).
+0. **Visual prototype, no agent. (done)** Standalone canvas/WebGL page with a debug panel to switch states and drive an amplitude slider. Tune the look here first.
+1. **Electron shell. (done)** Transparent always-on-top window (~300px), draggable, on all desktops, click-through while idle. Global hotkey (e.g. `Option+Space`) opens a small text input under the rings. Tray icon for quit and settings.
+2. **Agent bridge. (done)** `runTurn` takes `onThinking`/`onTool` hooks. A shared `createSession` (used by the CLI chat and the HUD) and `createCtxFor` keep both front ends identical, and the skill list lives in `src/skills/index.ts`. The main process streams typed events (`thinking`, `tool`, `reply`, `prompt`, `error`) to the renderer, and `ctx.confirm`/`ctx.ask` become prompts answered only from the input box. Tested with scripted fake models, including the approval flow.
+3. **Reactive motion. (partly done in stage 2)** Thinking and tool-call animation, reply pulse, and the confirm flow (the HUD shows the action and the human types `yes`).
 4. **Voice (later).** The `voice` skill feeds mic and TTS amplitude into the same `amplitude` input.
 
 ## Principles

@@ -1,9 +1,10 @@
 import { insideRings, type Point } from "../shared/geometry.js";
 import "../shared/ipc.js";
+import { replyVisibleMs, speakMs } from "../shared/text.js";
+import type { HudEvent } from "../shared/ipc.js";
 import { createHud } from "./rings.js";
 
 const RING_CENTER: Point = { x: 170, y: 150 }; // matches canvas placement in hud.css
-const REPLY_VISIBLE_MS = 5000;
 
 function byId<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -32,13 +33,15 @@ function setInteractive(on: boolean): void {
   window.hud.setInteractive(on);
 }
 
-function overInput(target: EventTarget | null): boolean {
-  return !form.hidden && target instanceof Node && form.contains(target);
+// The input box and a visible reply card take the mouse (the card scrolls); the rest stays click-through.
+function overUi(target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) return false;
+  return (!form.hidden && form.contains(target)) || (replyEl.classList.contains("show") && replyEl.contains(target));
 }
 
 document.addEventListener("pointermove", (e) => {
   if (dragging) return;
-  setInteractive(insideRings({ x: e.clientX, y: e.clientY }, RING_CENTER) || overInput(e.target));
+  setInteractive(insideRings({ x: e.clientX, y: e.clientY }, RING_CENTER) || overUi(e.target));
 });
 document.addEventListener("pointerleave", () => {
   if (!dragging) setInteractive(false);
@@ -68,10 +71,37 @@ function endDrag(): void {
 canvas.addEventListener("pointerup", endDrag);
 canvas.addEventListener("pointercancel", endDrag);
 
+// ---- reply card ----
+
+let replyTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showReply(text: string, kind: "reply" | "prompt" | "error", autoHideMs?: number): void {
+  replyEl.textContent = text;
+  replyEl.className = `show ${kind}`;
+  replyEl.scrollTop = 0;
+  clearTimeout(replyTimer);
+  if (autoHideMs) replyTimer = setTimeout(hideReply, autoHideMs);
+}
+
+function hideReply(): void {
+  clearTimeout(replyTimer);
+  replyEl.classList.remove("show");
+  setInteractive(false); // re-evaluated on the next pointer move
+}
+
 // ---- text input ----
+
+// While the agent waits on the human, the input answers that prompt instead of starting a turn.
+let activePrompt: { id: number; kind: "confirm" | "ask" } | null = null;
+let busy = false; // a turn is running
 
 function openInput(): void {
   form.hidden = false;
+  input.placeholder = !activePrompt
+    ? "Ask the assistant…"
+    : activePrompt.kind === "confirm"
+      ? 'Type "yes" to approve, anything else cancels'
+      : "Type your answer";
   input.focus();
 }
 
@@ -82,53 +112,104 @@ function closeInput(): void {
   window.hud.inputClosed();
 }
 
-window.hud.onToggleInput(() => (form.hidden ? openInput() : closeInput()));
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeInput();
-});
-
-// ---- placeholder reply (replaced by the real agent in stage 2) ----
-
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-
-let replyTimer: ReturnType<typeof setTimeout> | undefined;
-
-function showReply(text: string): void {
-  replyEl.textContent = text;
-  replyEl.classList.add("show");
-  clearTimeout(replyTimer);
-  replyTimer = setTimeout(() => replyEl.classList.remove("show"), REPLY_VISIBLE_MS);
+// Esc or the hotkey while a prompt is open cancels it: that counts as "no".
+function cancelPrompt(): void {
+  if (!activePrompt) return;
+  window.hud.answerPrompt(activePrompt.id, null);
+  activePrompt = null;
+  showReply("Cancelled.", "reply", 3000);
+  rings.setState("thinking");
 }
 
-async function fakeTurn(): Promise<void> {
-  rings.setState("thinking");
-  await sleep(1200);
-  rings.setState("speaking");
-  showReply("No agent connected yet. Stage 2 will answer this.");
-  const t0 = performance.now();
-  while (performance.now() - t0 < 1800) {
-    const t = (performance.now() - t0) / 1000;
-    const word = Math.max(0, Math.sin(t * 5)) ** 0.5;
-    rings.setAmplitude(word * (0.4 + 0.6 * Math.random()));
-    await sleep(50);
+window.hud.onToggleInput(() => {
+  if (!form.hidden) {
+    cancelPrompt();
+    closeInput();
+  } else {
+    openInput();
   }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!form.hidden) {
+    cancelPrompt();
+    closeInput();
+  } else {
+    hideReply();
+  }
+});
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  if (activePrompt) {
+    window.hud.answerPrompt(activePrompt.id, text);
+    activePrompt = null;
+    hideReply();
+    rings.setState("thinking");
+    closeInput();
+    return;
+  }
+  if (busy) return; // keep the text; try again when the current turn finishes
+  busy = true;
+  hideReply();
+  window.hud.submit(text);
+  closeInput();
+});
+
+// ---- agent events ----
+
+let speakToken = 0;
+
+async function speak(text: string): Promise<void> {
+  const token = ++speakToken;
+  rings.setState("speaking");
+  const ms = speakMs(text);
+  const t0 = performance.now();
+  while (token === speakToken && performance.now() - t0 < ms) {
+    // No audio yet: a speech-like rhythm stands in for the reply's amplitude.
+    const t = (performance.now() - t0) / 1000;
+    rings.setAmplitude(Math.max(0, Math.sin(t * 5)) ** 0.5 * (0.4 + 0.6 * Math.random()));
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  if (token !== speakToken) return; // a newer event took over
   rings.setAmplitude(0);
   rings.setState("idle");
 }
 
-let busy = false;
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const text = input.value.trim();
-  if (!text || busy) return;
-  window.hud.submit(text);
-  closeInput();
-  busy = true;
-  try {
-    await fakeTurn();
-  } finally {
-    busy = false;
+window.hud.onEvent((event: HudEvent) => {
+  switch (event.type) {
+    case "thinking":
+      speakToken++;
+      rings.setAmplitude(0);
+      rings.setState("thinking");
+      break;
+    case "tool":
+      // A short pulse in the core for each tool call.
+      rings.setAmplitude(0.8);
+      setTimeout(() => rings.setAmplitude(0), 160);
+      break;
+    case "reply":
+      busy = false;
+      showReply(event.text, "reply", replyVisibleMs(event.text));
+      void speak(event.text);
+      break;
+    case "prompt":
+      speakToken++;
+      rings.setAmplitude(0);
+      activePrompt = { id: event.id, kind: event.kind };
+      rings.setState("confirm");
+      showReply(event.question, "prompt");
+      openInput();
+      break;
+    case "error":
+      busy = false;
+      speakToken++;
+      rings.setAmplitude(0);
+      rings.setState("error");
+      showReply(event.message, "error", replyVisibleMs(event.message));
+      break;
   }
 });

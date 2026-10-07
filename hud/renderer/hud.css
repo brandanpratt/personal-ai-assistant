@@ -4,7 +4,7 @@
 html, body {
   margin: 0;
   width: 340px;
-  height: 430px;
+  height: 480px;
   background: transparent;
   overflow: hidden;
   user-select: none;
@@ -26,21 +26,33 @@ canvas {
   position: absolute;
   left: 20px;
   right: 20px;
-  top: 304px;
+  top: 306px;
+  max-height: 120px;
   margin: 0;
-  min-height: 40px;
-  text-align: center;
-  text-shadow: 0 0 8px rgba(90, 200, 255, 0.7);
+  padding: 8px 14px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: left;
+  user-select: text;
+  -webkit-user-select: text;
+  background: rgba(8, 24, 40, 0.88);
+  border: 1px solid rgba(90, 200, 255, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 0 14px rgba(90, 200, 255, 0.25);
   opacity: 0;
-  transition: opacity 0.4s;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
 }
-#reply.show { opacity: 1; }
+#reply.show { opacity: 1; visibility: visible; }
+#reply.prompt { border-color: rgba(255, 184, 64, 0.8); box-shadow: 0 0 14px rgba(255, 184, 64, 0.35); color: #ffe2a8; }
+#reply.error { border-color: rgba(255, 80, 80, 0.8); box-shadow: 0 0 14px rgba(255, 80, 80, 0.35); color: #ffc4c4; }
 
 #ask {
   position: absolute;
   left: 20px;
   right: 20px;
-  top: 354px;
+  top: 436px;
   margin: 0;
 }
 

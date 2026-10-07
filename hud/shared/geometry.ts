@@ -4,7 +4,7 @@ export interface Size { width: number; height: number }
 export interface Point { x: number; y: number }
 export interface Rect extends Point, Size {}
 
-export const WINDOW_SIZE: Size = { width: 340, height: 430 };
+export const WINDOW_SIZE: Size = { width: 340, height: 480 };
 export const RING_DIAMETER = 300;
 const MARGIN = 24;
 

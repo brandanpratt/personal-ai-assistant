@@ -1,11 +1,18 @@
-// HUD shell: a transparent, always-on-top window with the ring renderer.
-// Stage 1 has no agent. The renderer fakes a reply so the states can be seen.
+// HUD shell: a transparent, always-on-top window with the ring renderer, wired to the same agent
+// session (skills, tools, prompts) as the CLI chat. The renderer is only a display and an input box.
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { ollamaModel } from "../../src/core/agent.js";
+import { loadCoreConfig } from "../../src/core/config.js";
+import { createCtxFor } from "../../src/core/context.js";
+import { createSession, type Session } from "../../src/core/session.js";
+import { skills } from "../../src/skills/index.js";
 import { clampToWorkArea, defaultPosition, WINDOW_SIZE } from "../shared/geometry.js";
-import { CHANNELS } from "../shared/ipc.js";
+import { CHANNELS, type HudEvent } from "../shared/ipc.js";
+import { createHudAgent } from "./agent.js";
+import { createPromptBroker } from "./prompts.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url)); // hud/dist
 const HOTKEY = process.env.HUD_HOTKEY || "Alt+Space";
@@ -15,12 +22,39 @@ const MAX_INPUT_CHARS = 2000;
 const InteractiveMsg = z.boolean();
 const DragMoveMsg = z.object({ dx: z.number(), dy: z.number() });
 const SubmitMsg = z.string();
+const AnswerMsg = z.object({ id: z.number().int(), text: z.string().nullable() });
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let dragOrigin: [number, number] | null = null;
 
 if (!app.requestSingleInstanceLock()) app.quit();
+
+function send(event: HudEvent): void {
+  if (event.type === "prompt" && win) {
+    // The agent is waiting on the human: bring the input forward.
+    win.show();
+    win.focus();
+  }
+  win?.webContents.send(CHANNELS.event, event);
+}
+
+const prompts = createPromptBroker(send);
+
+let sessionPromise: Promise<Session> | undefined;
+function getSession(): Promise<Session> {
+  sessionPromise ??= (async () => {
+    const core = loadCoreConfig();
+    const ctxFor = createCtxFor(core, { confirm: prompts.confirm, ask: prompts.ask });
+    for (const skill of skills) await skill.init?.(ctxFor(skill));
+    return createSession({ skills, ctxFor, model: ollamaModel(core.ollamaModel) });
+  })();
+  // A failed start (bad .env, skill init) can be retried on the next message.
+  sessionPromise.catch(() => { sessionPromise = undefined; });
+  return sessionPromise;
+}
+
+const agent = createHudAgent({ getSession, emit: send });
 
 function createWindow(): void {
   const pos = defaultPosition(screen.getPrimaryDisplay().workArea);
@@ -57,7 +91,10 @@ function createWindow(): void {
 
   void w.loadFile(path.join(here, "..", "renderer", "index.html"));
   w.once("ready-to-show", () => w.showInactive());
-  w.on("closed", () => { win = null; });
+  w.on("closed", () => {
+    win = null;
+    prompts.cancelAll();
+  });
 }
 
 function summonInput(): void {
@@ -120,7 +157,12 @@ ipcMain.on(CHANNELS.submit, (_e, raw: unknown) => {
   const text = SubmitMsg.safeParse(raw);
   if (!text.success) return;
   const clean = text.data.slice(0, MAX_INPUT_CHARS).trim();
-  if (clean) console.log(`[hud] submitted ${clean.length} chars (no agent connected yet)`);
+  if (clean) void agent.submit(clean);
+});
+
+ipcMain.on(CHANNELS.answerPrompt, (_e, raw: unknown) => {
+  const msg = AnswerMsg.safeParse(raw);
+  if (msg.success) prompts.answer(msg.data.id, msg.data.text?.slice(0, MAX_INPUT_CHARS));
 });
 
 app.on("second-instance", summonInput);

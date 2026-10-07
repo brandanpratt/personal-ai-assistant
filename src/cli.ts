@@ -2,16 +2,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { loadCoreConfig } from './core/config.js';
 import { runChat } from './core/chat.js';
+import { createCtxFor } from './core/context.js';
 import { createIO } from './core/io.js';
-import { macNotify } from './core/notify.js';
 import { buildPlist, installInstructions } from './core/schedule.js';
-import { createRegistry, resolveCommand, type Skill, type SkillContext } from './core/skill.js';
-import { emailSkill } from './skills/email/index.js';
-import { filesSkill } from './skills/files/index.js';
+import { resolveCommand } from './core/skill.js';
+import { skills } from './skills/index.js';
 import { errorMessage } from './core/util.js';
-
-/** To add a skill: build it under src/skills/<name>/ and add it to this list. */
-const skills = createRegistry([filesSkill, emailSkill]);
 
 function help(): string {
   const lines = [
@@ -39,14 +35,7 @@ async function main(): Promise<void> {
   const core = loadCoreConfig();
   const io = createIO();
   try {
-    const ctxFor = (skill: Skill): SkillContext => ({
-      stateDir: path.join(core.stateDir, skill.name),
-      models: { chat: core.ollamaModel, embed: core.embedModel },
-      confirm: io.confirm,
-      ask: io.ask,
-      notify: macNotify,
-      log: console.log,
-    });
+    const ctxFor = createCtxFor(core, io);
     const initAll = async () => { for (const s of skills) await s.init?.(ctxFor(s)); };
 
     if (head === 'chat') {

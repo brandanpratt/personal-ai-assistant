@@ -9,14 +9,15 @@ const at = (...p: string[]): string => path.join(root, ...p);
 const common: BuildOptions = { bundle: true, sourcemap: true, logLevel: "info", target: "es2022" };
 
 await Promise.all([
-  // Main process: ESM, Node APIs. `electron` is provided by the runtime.
+  // Main process: ESM, Node APIs. Our code (hud/ and src/) is bundled; dependencies stay in
+  // node_modules (some, like the Keychain binding, are native and can't be bundled).
   build({
     ...common,
     entryPoints: [at("electron", "main.ts")],
     outfile: at("dist", "main.mjs"),
     platform: "node",
     format: "esm",
-    external: ["electron"],
+    packages: "external",
   }),
   // Sandboxed preload scripts must be CommonJS.
   build({

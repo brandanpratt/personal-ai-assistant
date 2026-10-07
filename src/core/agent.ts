@@ -35,6 +35,13 @@ export const toOllamaTools = (tools: Tool[]): OllamaTool[] =>
 
 const MAX_HISTORY = 30;
 
+/** Progress callbacks, so a front end (CLI, HUD) can show what the agent is doing. */
+export interface TurnHooks {
+  /** Called before each model call. */
+  onThinking?: () => void;
+  onTool?: (name: string, args: unknown) => void;
+}
+
 /**
  * Runs one user turn: lets the model call tools (bounded) until it answers in plain text.
  * `messages` is the running conversation and is updated in place.
@@ -44,13 +51,14 @@ export async function runTurn(
   tools: Tool[],
   messages: Message[],
   userText: string,
-  opts: { maxSteps?: number; onTool?: (name: string, args: unknown) => void } = {},
+  opts: TurnHooks & { maxSteps?: number } = {},
 ): Promise<string> {
-  const { maxSteps = 6, onTool } = opts;
+  const { maxSteps = 6, onTool, onThinking } = opts;
   messages.push({ role: 'user', content: userText });
   const defs = toOllamaTools(tools);
 
   for (let step = 0; step < maxSteps; step++) {
+    onThinking?.();
     const reply = await model(messages, defs);
     messages.push({ role: 'assistant', content: reply.content ?? '', tool_calls: reply.tool_calls });
     if (!reply.tool_calls?.length) return trimHistory(messages, reply.content);
