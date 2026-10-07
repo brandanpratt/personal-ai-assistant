@@ -28,6 +28,28 @@ export function clampToWorkArea(pos: Point, workArea: Rect, size: Size = WINDOW_
   };
 }
 
+/**
+ * Where to put the window at launch: the remembered spot if enough of it is still on some screen
+ * (a monitor may have been unplugged), otherwise the default corner of the primary screen.
+ */
+export function startPosition(
+  saved: Point | undefined,
+  workAreas: Rect[],
+  primary: Rect,
+  size: Size = WINDOW_SIZE,
+  keep = 80,
+): Point {
+  if (saved) {
+    const visible = workAreas.some((area) => {
+      const w = Math.min(saved.x + size.width, area.x + area.width) - Math.max(saved.x, area.x);
+      const h = Math.min(saved.y + size.height, area.y + area.height) - Math.max(saved.y, area.y);
+      return w >= keep && h >= keep;
+    });
+    if (visible) return { x: Math.round(saved.x), y: Math.round(saved.y) };
+  }
+  return defaultPosition(primary, size);
+}
+
 /** True when a point (window coordinates) is inside the ring circle. */
 export function insideRings(point: Point, ringCenter: Point, diameter = RING_DIAMETER): boolean {
   const dx = point.x - ringCenter.x;

@@ -26,8 +26,8 @@ First user: the project owner. Everything runs locally.
 0. **Visual prototype, no agent. (done)** Standalone canvas/WebGL page with a debug panel to switch states and drive an amplitude slider. Tune the look here first.
 1. **Electron shell. (done)** Transparent always-on-top window (~300px), draggable, on all desktops, click-through while idle. Global hotkey (e.g. `Option+Space`) opens a small text input under the rings. Tray icon for quit and settings.
 2. **Agent bridge. (done)** `runTurn` takes `onThinking`/`onTool` hooks. A shared `createSession` (used by the CLI chat and the HUD) and `createCtxFor` keep both front ends identical, and the skill list lives in `src/skills/index.ts`. The main process streams typed events (`thinking`, `tool`, `reply`, `prompt`, `error`) to the renderer, and `ctx.confirm`/`ctx.ask` become prompts answered only from the input box. Tested with scripted fake models, including the approval flow.
-3. **Reactive motion. (partly done in stage 2)** Thinking and tool-call animation, reply pulse, and the confirm flow (the HUD shows the action and the human types `yes`).
-4. **Voice (later).** The `voice` skill feeds mic and TTS amplitude into the same `amplitude` input.
+3. **Reactive motion and polish. (done)** Thinking and tool-call animation, reply pulse, and the confirm flow (the HUD shows the action and the human types `yes`).
+4. **Voice (deferred, not started).** The `voice` skill isn't available yet. When it is, it feeds mic and TTS amplitude into `setAmplitude` and uses the unused `listening` state; the renderer needs no redesign. The reply pulse is a stand-in until then.
 
 ## Principles
 
@@ -38,8 +38,8 @@ First user: the project owner. Everything runs locally.
 - `ctx.confirm` stays the human's typed `yes`; the HUD can display the prompt but never answers it.
 - Respect macOS "reduce motion". The window is always dismissible (Esc).
 
-## Open questions
+## Decisions on the open questions
 
-- Auto-hide after a reply, or stay floating?
-- Default screen position?
-- One Jarvis-blue palette, or a color per state (e.g. cyan idle, amber confirm)?
+- Stays floating on screen; the hotkey and tray hide or show it.
+- Remembers where you drag it (`.state/hud/window.json`); falls back to bottom-right if that screen is gone. Tray has Reset position.
+- Per-state colours: cyan idle, blue thinking, amber approvals, red errors.

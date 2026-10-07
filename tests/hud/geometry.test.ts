@@ -3,6 +3,7 @@ import {
   clampToWorkArea,
   defaultPosition,
   insideRings,
+  startPosition,
   WINDOW_SIZE,
 } from "../../hud/shared/geometry.js";
 
@@ -38,5 +39,30 @@ describe("hud geometry", () => {
     expect(insideRings({ x: 170, y: 150 }, center)).toBe(true);
     expect(insideRings({ x: 170 + 149, y: 150 }, center)).toBe(true);
     expect(insideRings({ x: 170 + 149, y: 150 + 149 }, center)).toBe(false);
+  });
+});
+
+describe("startPosition", () => {
+  const primary = { x: 0, y: 25, width: 1440, height: 875 };
+  const external = { x: 1440, y: 0, width: 1920, height: 1080 };
+
+  it("uses the remembered spot when it is still on a screen", () => {
+    expect(startPosition({ x: 200, y: 100 }, [primary], primary)).toEqual({ x: 200, y: 100 });
+  });
+
+  it("works on a second monitor", () => {
+    expect(startPosition({ x: 2000, y: 100 }, [primary, external], primary)).toEqual({ x: 2000, y: 100 });
+  });
+
+  it("falls back to the default corner when that monitor is gone", () => {
+    expect(startPosition({ x: 2000, y: 100 }, [primary], primary)).toEqual(defaultPosition(primary));
+  });
+
+  it("falls back when only a sliver would be visible", () => {
+    expect(startPosition({ x: 1440 - 20, y: 100 }, [primary], primary)).toEqual(defaultPosition(primary));
+  });
+
+  it("uses the default when nothing was saved", () => {
+    expect(startPosition(undefined, [primary], primary)).toEqual(defaultPosition(primary));
   });
 });

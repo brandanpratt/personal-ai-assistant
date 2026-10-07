@@ -5,18 +5,20 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { ollamaModel } from "../../src/core/agent.js";
-import { loadCoreConfig } from "../../src/core/config.js";
+import { loadCoreConfig, resolveStateDir } from "../../src/core/config.js";
 import { createCtxFor } from "../../src/core/context.js";
 import { createSession, type Session } from "../../src/core/session.js";
 import { skills } from "../../src/skills/index.js";
-import { clampToWorkArea, defaultPosition, WINDOW_SIZE } from "../shared/geometry.js";
+import { clampToWorkArea, defaultPosition, startPosition, WINDOW_SIZE } from "../shared/geometry.js";
 import { CHANNELS, type HudEvent } from "../shared/ipc.js";
 import { createHudAgent } from "./agent.js";
+import { forgetPosition, loadPosition, savePosition } from "./position.js";
 import { createPromptBroker } from "./prompts.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url)); // hud/dist
 const HOTKEY = process.env.HUD_HOTKEY || "Alt+Space";
 const MAX_INPUT_CHARS = 2000;
+const positionFile = path.join(resolveStateDir(), "hud", "window.json");
 
 // IPC is a trust boundary: validate everything the renderer sends.
 const InteractiveMsg = z.boolean();
@@ -57,7 +59,11 @@ function getSession(): Promise<Session> {
 const agent = createHudAgent({ getSession, emit: send });
 
 function createWindow(): void {
-  const pos = defaultPosition(screen.getPrimaryDisplay().workArea);
+  const pos = startPosition(
+    loadPosition(positionFile),
+    screen.getAllDisplays().map((d) => d.workArea),
+    screen.getPrimaryDisplay().workArea,
+  );
 
   const w = new BrowserWindow({
     ...WINDOW_SIZE,
@@ -110,6 +116,13 @@ function toggleVisible(): void {
   else win.showInactive();
 }
 
+function resetPosition(): void {
+  if (!win) return;
+  const pos = defaultPosition(screen.getPrimaryDisplay().workArea);
+  win.setPosition(pos.x, pos.y);
+  forgetPosition(positionFile);
+}
+
 function createTray(): void {
   tray = new Tray(nativeImage.createEmpty());
   tray.setTitle("◎");
@@ -117,6 +130,7 @@ function createTray(): void {
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: `Ask… (${HOTKEY})`, click: summonInput },
     { label: "Show / hide rings", click: toggleVisible },
+    { label: "Reset position", click: resetPosition },
     { type: "separator" },
     { label: "Quit", role: "quit" },
   ]));
@@ -140,7 +154,13 @@ ipcMain.on(CHANNELS.dragMove, (_e, raw: unknown) => {
   win.setPosition(next.x, next.y);
 });
 
-ipcMain.on(CHANNELS.dragEnd, () => { dragOrigin = null; });
+ipcMain.on(CHANNELS.dragEnd, () => {
+  if (win && dragOrigin) {
+    const [x, y] = win.getPosition();
+    if (x !== undefined && y !== undefined) savePosition(positionFile, { x, y });
+  }
+  dragOrigin = null;
+});
 
 // Give keyboard focus back to whatever app the user was in.
 ipcMain.on(CHANNELS.inputClosed, () => {

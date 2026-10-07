@@ -29,10 +29,15 @@ export interface CoreConfig {
   embedModel: string;
 }
 
+/** Root of all runtime state (gitignored). Needs no model settings, so front ends can use it on their own. */
+export function resolveStateDir(env: Env = process.env): string {
+  return path.resolve(env.STATE_DIR ?? '.state');
+}
+
 /** Settings shared by every skill. Skill-specific settings live in the skill's own config. */
 export function loadCoreConfig(env: Env = process.env): CoreConfig {
   return {
-    stateDir: path.resolve(env.STATE_DIR ?? '.state'),
+    stateDir: resolveStateDir(env),
     ollamaModel: required(env, 'OLLAMA_MODEL'),
     embedModel: env.EMBED_MODEL ?? 'nomic-embed-text',
   };
