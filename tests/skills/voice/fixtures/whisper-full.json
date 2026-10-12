@@ -1,0 +1,36 @@
+{
+  "systeminfo": "fixture",
+  "model": { "type": "large" },
+  "result": { "language": "en" },
+  "transcription": [
+    {
+      "offsets": { "from": 0, "to": 2400 },
+      "text": " Wha you sayin, bey?",
+      "tokens": [
+        { "text": "[_BEG_]", "p": 0.99 },
+        { "text": " Wha", "p": 0.31 },
+        { "text": " you", "p": 0.97 },
+        { "text": " say", "p": 0.88 },
+        { "text": "in", "p": 0.42 },
+        { "text": ",", "p": 0.95 },
+        { "text": " bey", "p": 0.66 },
+        { "text": "?", "p": 0.9 },
+        { "text": "[_TT_120]", "p": 0.5 }
+      ]
+    },
+    { "offsets": { "from": 2400, "to": 4000 }, "text": " [BLANK_AUDIO]", "tokens": [] },
+    {
+      "offsets": { "from": 4000, "to": 6100 },
+      "text": " I comin later.",
+      "tokens": [
+        { "text": " I", "p": 0.93 },
+        { "text": " com", "p": 0.81 },
+        { "text": "in", "p": 0.77 },
+        { "text": " later", "p": 0.96 },
+        { "text": ".", "p": 0.97 }
+      ]
+    },
+    { "offsets": { "from": 6100, "to": 8000 }, "text": " I comin later.", "tokens": [] },
+    { "offsets": { "from": 8000, "to": 9000 }, "text": " (music)", "tokens": [] }
+  ]
+}

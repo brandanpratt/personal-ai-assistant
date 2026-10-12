@@ -4,6 +4,13 @@ Transcribe WhatsApp voice notes locally and explain Bahamian dialect in plain En
 
 First user: the project owner. Everything runs locally. Audio never goes into git.
 
+## Decisions (2026-10-11)
+
+- **Local only.** Interpretation uses a local Ollama model (bigger than llama3.1:8b, e.g. a ~30B model). No audio or text leaves the machine.
+- **Drop folder.** Save voice notes into `~/voice-inbox` (`VOICE_INBOX`). The skill only reads them. A notify-only scheduled check says when new ones arrive.
+- **Voice notes only.** Live mic input for chat and the HUD comes later and will reuse the transcriber.
+- Stage 1 code is built alongside stage 0, and the baseline uses the skill's own commands.
+
 ## Pipeline
 
 ```
@@ -40,9 +47,19 @@ Training on rented GPUs (e.g. vast.ai) means audio leaves this machine and sits 
 ## Stage 0 checklist
 
 1. Run `brew install ffmpeg whisper-cpp` (owner runs it).
-2. Download a Whisper model (command to be confirmed after install).
+2. Run `npm run dev -- voice doctor` and follow its fixes: download a Whisper model, set `WHISPER_MODEL` in `.env`, and create `~/voice-inbox`.
 3. Put 5-10 voice notes in `~/voice-samples/` (outside the repo) and, for each, a text file with the same name containing what was actually said.
-4. Run the baseline and record the results here.
+4. Run `npm run dev -- voice baseline ~/voice-samples` (milestone 2) and record the results here.
+
+## Milestones
+
+| # | What | Status |
+|---|---|---|
+| 1 | `doctor`, `list`, `transcribe` (ffmpeg -> whisper.cpp, `[?word]` markers, cache) | done |
+| 2 | Word error rate + `baseline` command, then the owner runs stage 0 | next |
+| 3 | Glossary + local interpreter + `explain` + chat tools + notify-only check | |
+| 4 | Corrections (stage 3) | |
+| 5 | Tone (stage 4) | |
 
 ## Risks
 
