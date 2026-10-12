@@ -1,12 +1,14 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { Ollama } from 'ollama';
 import type { Command, SkillContext } from '../../core/skill.js';
 import { errorMessage } from '../../core/util.js';
+import { findPairs, formatBaseline, summarize } from './baseline.js';
 import { loadVoiceConfig, requireWhisperModel, type VoiceConfig } from './config.js';
 import { clean, formatTranscript } from './format.js';
 import { findNote, listInbox } from './inbox.js';
 import { findExecutable, installHint, runBinary } from './run.js';
-import { transcribeFile, type TranscribeDeps } from './transcribe.js';
+import { transcribeFile, transcriptText, type TranscribeDeps } from './transcribe.js';
 
 const MODEL_URL = 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin';
 
@@ -96,4 +98,34 @@ const transcribe: Command = {
   },
 };
 
-export const voiceCommands: Record<string, Command> = { doctor, list, transcribe };
+const baseline: Command = {
+  description: 'Measure accuracy: transcribe each note in a folder and compare with its same-name .txt (what was really said).',
+  run: async (ctx, [dir]) => {
+    if (!dir) return console.log('Usage: npm run dev -- voice baseline ~/voice-samples');
+    const cfg = loadVoiceConfig();
+    const deps = transcribeDeps(ctx, cfg);
+    const { pairs, missing } = findPairs(path.resolve(dir));
+    for (const m of missing) console.log(`  skipped ${clean(m, 60)}: no matching .txt with what was said`);
+    if (pairs.length === 0) return console.log('No notes with a reference .txt found.');
+
+    const items: { name: string; reference: string; hypothesis: string }[] = [];
+    for (const [i, p] of pairs.entries()) {
+      ctx.log(`[${i + 1}/${pairs.length}] ${clean(path.basename(p.audio), 60)}`);
+      try {
+        const { transcript } = await transcribeFile(deps, p.audio);
+        items.push({ name: clean(path.basename(p.audio), 60), reference: fs.readFileSync(p.reference, 'utf8'), hypothesis: transcriptText(transcript) });
+      } catch (err) {
+        console.log(`  failed: ${errorMessage(err)}`);
+      }
+    }
+    if (items.length === 0) return;
+    const now = new Date();
+    const report = formatBaseline(summarize(items), path.basename(deps.whisperModel), now);
+    const file = path.join(ctx.stateDir, `baseline-${now.toISOString().slice(0, 16).replace(/[T:]/g, '-')}.md`);
+    fs.mkdirSync(ctx.stateDir, { recursive: true });
+    fs.writeFileSync(file, report);
+    console.log(`\n${report}\nSaved: ${file}`);
+  },
+};
+
+export const voiceCommands: Record<string, Command> = { doctor, list, transcribe, baseline };
