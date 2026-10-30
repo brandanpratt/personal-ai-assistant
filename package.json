@@ -1,6 +1,7 @@
 {
   "name": "personal-ai-assistant",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Personal AI assistant. First skill: a local, privacy-first file organizer (dry-run by default, undoable).",

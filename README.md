@@ -175,3 +175,7 @@ Rules every skill follows:
 2. `npm run dev -- organize`: review the folders carefully (use `show <n>`), then check the summary counts before typing `yes`.
 3. If anything looks wrong, `npm run dev -- undo`.
 4. Run `organize` again later to see remembered folders (`[remembered]`) skip the model.
+
+## License
+
+[MIT](LICENSE) © 2026 Brandan Pratt.
