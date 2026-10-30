@@ -1,9 +1,9 @@
 ---
-name: downloads-organizer
+name: safesort
 description: Safely organize a messy Downloads (or any) folder into type and topic folders. Always shows a dry-run plan first, moves nothing without the user's typed "yes", never deletes or overwrites, skips secret files, and keeps an undo log so every run can be reversed. Use when the user asks to clean up, sort, tidy or organize Downloads, Desktop or a folder, or to undo a previous cleanup.
 ---
 
-# Downloads Organizer
+# SafeSort: Downloads Organizer
 
 Sort the loose files in one folder into type folders (`Documents/`, `Images/`, …) with topic subfolders (`Documents/Resumes/`). The ground rule is that **you propose and the user decides**. You never delete anything, you never move a file without the user's typed `yes`, and every run can be undone.
 
